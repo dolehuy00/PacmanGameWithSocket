@@ -3,6 +3,7 @@ import threading
 import json
 import pygame
 import time
+import zmq
 
 # khai báo ip và port
 host = '127.0.0.1'
@@ -22,13 +23,13 @@ data_arr = []
 # định nghĩa hàm gửi du lieu tới tất cả client
 def send_data():
     while True:
-        pygame.time.Clock().tick(120)
+        pygame.time.Clock().tick(60)
         try:
             if len(data_arr) > 0:
                 for client in clients:
-                    client.send(json.dumps(data_arr).encode("ascii"))
-        except:
-            pass
+                    client.send(json.dumps(data_arr).encode())
+        except Exception as e:
+            print(e)
 
 
 # đinh nghĩa hàm điều khiển client
@@ -40,10 +41,10 @@ def handle(client):
         try:
             # nhận du lieu client
             data = client.recv(1024)
-            data_json = json.loads(data.decode('ascii'))
+            data_json = json.loads(data.decode())
             # gui lai du lieu
             if clients[0] == client:
-                data_json["owner"] = "master"
+                data_json["o"] = "master"
                 if len(data_arr) == 0:
                     data_arr.append(json.dumps(data_json))
                 else:
@@ -74,9 +75,9 @@ def receive():
         print(f'Connected with {str(address)}')
         # nhận tên nickname của client
         data = client.recv(1024)
-        data_json = json.loads(data.decode('ascii'))
+        data_json = json.loads(data.decode())
         # add nickname vào mảng nicknames để quản lý
-        nickname = data_json["nick_name"]
+        nickname = data_json["n"]
         nicknames.append(nickname)
         # add client vào mảng client để quản lý
         clients.append(client)

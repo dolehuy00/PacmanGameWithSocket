@@ -6,16 +6,12 @@ import socket
 import threading
 import json
 
-# khai báo ip và port
-host = '127.0.0.1'
-port = 55555
-
-# tạo socket và kết nối tới server trên host và port
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((host, port))
+# Tạo socket client
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Nguyen Van C"
+nick_name = "Nguyen Van A"
 
 # init pygame
 pygame.init()
@@ -382,32 +378,63 @@ game_running = True
 
 
 def receive_data():
+    global red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default,\
+        flicker_red_ghost_clock, blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead, \
+        blue_dead_time_count, blue_dead_time_default, flicker_blue_ghost_clock, orange_ghost_x, orange_ghost_y,\
+        orange_ghost_direction, orange_ghost_dead, orange_dead_time_count, orange_dead_time_default,\
+        flicker_orange_ghost_clock, pink_ghost_x, pink_ghost_y, pink_ghost_direction, pink_ghost_dead,\
+        pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock
     while True:
         timer.tick(fps * 2)
         try:
-            # nhận dữ liệu từ server
-            data = client.recv(1024).decode('ascii')
-            print(json.loads(data), "\n")
-        except:
-            pass
+            # Nhận phản hồi từ server
+            response, server_address = client_socket.recvfrom(4096)
+            data = json.loads(response.decode())
+            data_ghost = data["ghost"]
+            red_ghost_x = data_ghost[0]
+            red_ghost_y = data_ghost[1]
+            red_ghost_direction = data_ghost[2]
+            red_ghost_dead = data_ghost[3]
+            red_dead_time_count = data_ghost[4]
+            red_dead_time_default = data_ghost[5]
+            flicker_red_ghost_clock = data_ghost[6]
+
+            blue_ghost_x = data_ghost[7]
+            blue_ghost_y = data_ghost[8]
+            blue_ghost_direction = data_ghost[9]
+            blue_ghost_dead = data_ghost[10]
+            blue_dead_time_count = data_ghost[11]
+            blue_dead_time_default = data_ghost[12]
+            flicker_blue_ghost_clock = data_ghost[13]
+
+            orange_ghost_x = data_ghost[14]
+            orange_ghost_y = data_ghost[15]
+            orange_ghost_direction = data_ghost[16]
+            orange_ghost_dead = data_ghost[17]
+            orange_dead_time_count = data_ghost[18]
+            orange_dead_time_default = data_ghost[19]
+            flicker_orange_ghost_clock = data_ghost[20]
+
+            pink_ghost_x = data_ghost[21]
+            pink_ghost_y = data_ghost[22]
+            pink_ghost_direction = data_ghost[23]
+            pink_ghost_dead = data_ghost[24]
+            pink_dead_time_count = data_ghost[25]
+            pink_dead_time_default = data_ghost[26]
+            flicker_pink_ghost_clock = data_ghost[27]
+        except Exception as e:
+            print(e)
 
 
 def send_data():
     json_data = json.dumps(
-        {"nick_name": nick_name,
-         "owner": "member",
-         "score": total_score,
-         "player_direction": player_direction,
-         "player_x": player_x,
-         "player_y": player_y
-         }
+        [nick_name, total_score, player_direction, player_x, player_y]
     )
     # gửi dữ liệu lên server
-    client.send(json_data.encode("ascii"))
+    client_socket.sendto(json_data.encode(), server_address)
 
 
 receive_thread = threading.Thread(target=receive_data)
-print("run receive")
 receive_thread.start()
 
 while game_running:
@@ -536,29 +563,29 @@ while game_running:
     # ma đỏ
     red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_image, red_ghost_direction, red_ghost_dead)
     flicker_red_ghost_clock = red_ghost.draw(flicker_red_ghost_clock)
-    if not red_ghost_dead:
-        red_ghost_x, red_ghost_y, red_ghost_direction = red_ghost.move()
+    # if not red_ghost_dead:
+    #     red_ghost_x, red_ghost_y, red_ghost_direction = red_ghost.move()
 
     # ma xanh
     blue_ghost = Ghost(blue_ghost_x, blue_ghost_y, ghost_speeds[1], blue_ghost_image, blue_ghost_direction,
                        blue_ghost_dead)
     flicker_blue_ghost_clock = blue_ghost.draw(flicker_blue_ghost_clock)
-    if not blue_ghost_dead:
-        blue_ghost_x, blue_ghost_y, blue_ghost_direction = blue_ghost.move()
+    # if not blue_ghost_dead:
+    #     blue_ghost_x, blue_ghost_y, blue_ghost_direction = blue_ghost.move()
 
     # ma hồng
     pink_ghost = Ghost(pink_ghost_x, pink_ghost_y, ghost_speeds[2], pink_ghost_image, pink_ghost_direction,
                        pink_ghost_dead)
     flicker_pink_ghost_clock = pink_ghost.draw(flicker_pink_ghost_clock)
-    if not pink_ghost_dead:
-        pink_ghost_x, pink_ghost_y, pink_ghost_direction = pink_ghost.move()
+    # if not pink_ghost_dead:
+    #     pink_ghost_x, pink_ghost_y, pink_ghost_direction = pink_ghost.move()
 
     # ma cam
     orange_ghost = Ghost(orange_ghost_x, orange_ghost_y, ghost_speeds[3], orange_ghost_image, orange_ghost_direction,
                          orange_ghost_dead)
     flicker_orange_ghost_clock = orange_ghost.draw(flicker_orange_ghost_clock)
-    if not orange_ghost_dead:
-        orange_ghost_x, orange_ghost_y, orange_ghost_direction = orange_ghost.move()
+    # if not orange_ghost_dead:
+    #     orange_ghost_x, orange_ghost_y, orange_ghost_direction = orange_ghost.move()
 
     # score
     total_score = check_eat_food(total_score)

@@ -6,17 +6,12 @@ import socket
 import threading
 import json
 
-# khai báo ip và port
-host = '127.0.0.1'
-port = 55555
-
-# tạo socket và kết nối tới server trên host và port
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((host, port))
+# Tạo socket client
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Nguyen Van B"
-client_is_master = False
+nick_name = "Nguyen Van C"
 
 # init pygame
 pygame.init()
@@ -383,40 +378,26 @@ game_running = True
 
 
 def receive_data():
-    global client_is_master
     while True:
         timer.tick(fps * 2)
         try:
             # nhận dữ liệu từ server
-            data = client.recv(1024).decode('ascii')
-            data_arr = json.loads(data)
-            data_head = json.loads(data_arr[0])
-            if data_head["nick_name"] == nick_name:
-                client_is_master = True
-                print("you is master")
-            else:
-                client_is_master = False
-                print("you is member")
-        except:
-            pass
+            # Nhận phản hồi từ server
+            response, server_address = client_socket.recvfrom(4096)
+            print(json.loads(response.decode()), "\n")
+        except Exception as e:
+            print(e)
 
 
 def send_data():
     json_data = json.dumps(
-        {"nick_name": nick_name,
-         "owner": "member",
-         "score": total_score,
-         "player_direction": player_direction,
-         "player_x": player_x,
-         "player_y": player_y
-         }
+        [nick_name, total_score, player_direction, player_x, player_y]
     )
     # gửi dữ liệu lên server
-    client.send(json_data.encode("ascii"))
+    client_socket.sendto(json_data.encode(), server_address)
 
 
 receive_thread = threading.Thread(target=receive_data)
-print("run receive")
 receive_thread.start()
 
 while game_running:
