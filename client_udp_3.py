@@ -11,7 +11,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Nguyen Van C"
+nick_name = "Client 7"
 
 # init pygame
 pygame.init()
@@ -39,42 +39,17 @@ icon = pygame.image.load("images/pacman/1.png")
 pygame.display.set_icon(icon)
 
 
-# ramdom food
-def random_to_number(matrix, num_to_replace=10, replace_to=1):
-    n = len(matrix)  # Số hàng của ma trận
-    m = len(matrix[0])  # Số cột của ma trận
-
-    # Tìm và chọn ngẫu nhiên các vị trí 0 để thay thế
-    replace_indices = []
-    for _ in range(num_to_replace):
-        while True:
-            i = random.randint(0, n - 1)  # Chọn một chỉ số hàng ngẫu nhiên
-            j = random.randint(0, m - 1)  # Chọn một chỉ số cột ngẫu nhiên
-            if matrix[i][j] == 0:  # Nếu giá trị tại vị trí này là 0, thì thêm vào danh sách và thoát vòng lặp
-                replace_indices.append((i, j))
-                break
-
-    # Thay thế các số 0 tại các vị trí đã chọn thành 1
-    for i, j in replace_indices:
-        matrix[i][j] = replace_to
-
-    return matrix
-
-
 # thông tin map
 map_level = copy.deepcopy(map_level_1)
-# số lượng thức ăn nhỏ
-map_level = random_to_number(map_level, 70)
-# số lượng thức ăn lớn
-map_level = random_to_number(map_level, 3, 2)
 
 # thông tin fps
 timer = pygame.time.Clock()
 fps = 60
 
 # tải phông chữ
-font_path = "font/Roboto/Roboto-Regular.ttf"
-font = pygame.font.Font(font_path, 20)
+font_regular_path = "font/Roboto/Roboto-Regular.ttf"
+font_bold_part = "font/Roboto/Roboto-Bold.ttf"
+font = pygame.font.Font(font_regular_path, 20)
 
 # màu nền
 background_color = (45, 45, 45)
@@ -104,15 +79,16 @@ wall_8 = pygame.transform.scale(pygame.image.load("images/wall/8.png"), (25, 25)
 small_food = pygame.transform.scale(pygame.image.load("images/food/small_dot.png"), (25, 25))
 big_food = pygame.transform.scale(pygame.image.load("images/food/big_dot.png"), (25, 25))
 
+# tai hinh anh khung score
+score_board_frame = pygame.transform.scale(pygame.image.load("images/score/score_table.png"), (WIDTH_SCORE_TABLE, HEIGHT_SCORE_TABLE))
+
 # cài đặt thông tin thức ăn nhấp nháy
 flicker_food = False
-loop_count_flicker_food = 0
-flick_food_after_loop = 50
-un_visible_food_loop = 10
+loop_flicker_food_clock = 0
 
 
-# random pacman ra vị trí còn trống ngẫu nhiên
-def random_empty_position(matrix):
+# tìm vị trí trống trong matrix map
+def random_empty_position_in_map(matrix):
     empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
     if empty_positions:
         return random.choice(empty_positions)
@@ -120,57 +96,43 @@ def random_empty_position(matrix):
         return None
 
 
-# thông tin của pacman
-player_y, player_x = random_empty_position(map_level)
-player_x = player_x * 25
-player_y = player_y * 25
-center_player_x = 0
-center_player_y = 0
-player_direction = 0
-loop_count_player = 0
-speed_player = 2
-turns_allowed = [False, False, False, False]  # Right, Left, Up, Down
-total_score = 0
-flicker_player = False
-count_flicker_player = 0
-player_flicker_time_default = 200
-player_flicker_time_count = player_flicker_time_default
+# random và tính toán vị trí trống
+def random_empty_position(matrix):
+    y, x = random_empty_position_in_map(matrix)
+    return x * 25, y * 25
+
 
 # thông tin mấy con ma
 ghost_is_slow = False
 ghost_slow_time_count = 0
 ghost_slow_time_default = 600
 
-red_ghost_y, red_ghost_x = random_empty_position(map_level)
-red_ghost_x = red_ghost_x * 25
-red_ghost_y = red_ghost_y * 25
+red_ghost_x = 1 * 25
+red_ghost_y = 1 * 25
 red_ghost_direction = 0
 red_ghost_dead = False
 red_dead_time_count = 0
 red_dead_time_default = 400
 flicker_red_ghost_clock = 0
 
-blue_ghost_y, blue_ghost_x = random_empty_position(map_level)
-blue_ghost_x = blue_ghost_x * 25
-blue_ghost_y = blue_ghost_y * 25
+blue_ghost_x = 1 * 25
+blue_ghost_y = 1 * 25
 blue_ghost_direction = 1
 blue_ghost_dead = False
 blue_dead_time_count = 0
 blue_dead_time_default = 400
 flicker_blue_ghost_clock = 0
 
-orange_ghost_y, orange_ghost_x = random_empty_position(map_level)
-orange_ghost_x = orange_ghost_x * 25
-orange_ghost_y = orange_ghost_y * 25
+orange_ghost_x = 1 * 25
+orange_ghost_y = 1 * 25
 orange_ghost_direction = 2
 orange_ghost_dead = False
 orange_dead_time_count = 0
 orange_dead_time_default = 400
 flicker_orange_ghost_clock = 0
 
-pink_ghost_y, pink_ghost_x = random_empty_position(map_level)
-pink_ghost_x = pink_ghost_x * 25
-pink_ghost_y = pink_ghost_y * 25
+pink_ghost_x = 1 * 25
+pink_ghost_y = 1 * 25
 pink_ghost_direction = 3
 pink_ghost_dead = False
 pink_dead_time_count = 0
@@ -180,13 +142,112 @@ flicker_pink_ghost_clock = 0
 ghost_speeds_default = [3, 2, 2, 2]
 ghost_speeds = ghost_speeds_default
 
+# thông tin player
+center_player_x = 0
+center_player_y = 0
+player_direction = 0
+loop_count_player = 0
+speed_player = 2
+turns_allowed = [False, False, False, False]  # Right, Left, Up, Down
+player_dead = True
+total_score = 0
+is_flickering_player = False
+is_visible_player = False
+count_flicker_player = 0
+player_flicker_time_default = 200
+player_flicker_time_count = player_flicker_time_default
+font_name_player = pygame.font.Font(font_regular_path, 12)
 
-def random_player_position(matrix):
-    y, x = random_empty_position(matrix)
-    return x * 25, y * 25
+# thoong tin cacs nguoi choi khac
+other_player_data = []
+
+# thong tin bang xep hang
+data_score_table = {}
+text_score_color = (112, 74, 53)
 
 
-def draw_board():
+# hàm nhận dữ liệu từ server
+def receive_data():
+    global red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default, \
+        blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead, blue_dead_time_count, \
+        blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction, orange_ghost_dead,\
+        orange_dead_time_count, orange_dead_time_default, pink_ghost_x, pink_ghost_y, pink_ghost_direction, \
+        pink_ghost_dead, pink_dead_time_count, pink_dead_time_default, ghost_speeds, map_level, player_dead, \
+        player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table
+    while True:
+        try:
+            # Nhận phản hồi từ server
+            response, server_address = client_socket.recvfrom(4096)
+            data = json.loads(response.decode())
+
+            data_map = data.get("map")
+            if data_map is not None:
+                # data map
+                map_level = data_map
+                # data ghost
+                data_ghost = data["ghost"]
+                ghost_speeds = data_ghost[24]
+                ghost_is_slow = data_ghost[25]
+                # data red ghost
+                red_ghost_x = data_ghost[0]
+                red_ghost_y = data_ghost[1]
+                red_ghost_direction = data_ghost[2]
+                red_ghost_dead = data_ghost[3]
+                red_dead_time_count = data_ghost[4]
+                red_dead_time_default = data_ghost[5]
+                # data blue ghost
+                blue_ghost_x = data_ghost[6]
+                blue_ghost_y = data_ghost[7]
+                blue_ghost_direction = data_ghost[8]
+                blue_ghost_dead = data_ghost[9]
+                blue_dead_time_count = data_ghost[10]
+                blue_dead_time_default = data_ghost[11]
+                # data orange ghost
+                orange_ghost_x = data_ghost[12]
+                orange_ghost_y = data_ghost[13]
+                orange_ghost_direction = data_ghost[14]
+                orange_ghost_dead = data_ghost[15]
+                orange_dead_time_count = data_ghost[16]
+                orange_dead_time_default = data_ghost[17]
+                # data pink ghost
+                pink_ghost_x = data_ghost[18]
+                pink_ghost_y = data_ghost[19]
+                pink_ghost_direction = data_ghost[20]
+                pink_ghost_dead = data_ghost[21]
+                pink_dead_time_count = data_ghost[22]
+                pink_dead_time_default = data_ghost[23]
+
+            data_you = data.get("you")
+            if data_you is not None:
+                total_score = data_you[6]
+                if data_you[4]:
+                    player_dead = True
+                    player_x = data_you[1]
+                    player_y = data_you[2]
+
+            data_other_player = data.get("otherPlayer")
+            if data_other_player is not None:
+                other_player_data = data_other_player
+
+            data_score = data.get("score_table")
+            if data_score is not None:
+                data_score_table = data_score
+                print(data_score_table)
+
+        except Exception as e:
+            print("exception", e)
+
+
+# chạy luồng riêng để nhận dữ liệu
+receive_thread = threading.Thread(target=receive_data)
+receive_thread.start()
+
+# thông tin vị trí player
+player_x, player_y = random_empty_position(map_level)
+
+
+# hàm vẽ map lên màn hình
+def draw_map():
     for i in range(len(map_level)):
         for j in range(len(map_level[i])):
             if map_level[i][j] == 1:
@@ -207,37 +268,34 @@ def draw_board():
                 screen.blit(wall_8, (j * 25, i * 25))
 
 
-def draw_player():
-    # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
-    if player_direction == 0:
-        screen.blit(player_images[loop_count_player // 5], (player_x, player_y))
-    elif player_direction == 1:
-        screen.blit(pygame.transform.flip(player_images[loop_count_player // 5], True, False), (player_x, player_y))
-    elif player_direction == 2:
-        screen.blit(pygame.transform.rotate(player_images[loop_count_player // 5], 90), (player_x, player_y))
-    elif player_direction == 3:
-        screen.blit(pygame.transform.rotate(player_images[loop_count_player // 5], 270), (player_x, player_y))
-
-
-def draw_flicker_player():
-    global count_flicker_player
-    if count_flicker_player < 10:
-        count_flicker_player += 1
-    elif count_flicker_player < 20:
-        count_flicker_player += 1
+# hàm vẽ player lên màn hình
+def draw_player(visible_player, loop_player_clock, player_location_x, player_location_y, direction, name):
+    if visible_player:
+        name_player = font_name_player.render(name, True, (255, 255, 255), None)
+        screen.blit(name_player, name_player.get_rect(center=(player_location_x + 13, player_location_y - 13)))
         # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
-        if player_direction == 0:
-            screen.blit(player_images[loop_count_player // 5], (player_x, player_y))
-        elif player_direction == 1:
-            screen.blit(pygame.transform.flip(player_images[loop_count_player // 5], True, False), (player_x, player_y))
-        elif player_direction == 2:
-            screen.blit(pygame.transform.rotate(player_images[loop_count_player // 5], 90), (player_x, player_y))
-        elif player_direction == 3:
-            screen.blit(pygame.transform.rotate(player_images[loop_count_player // 5], 270), (player_x, player_y))
-    else:
-        count_flicker_player = 0
+        if direction == 0:
+            screen.blit(player_images[loop_player_clock // 5], (player_location_x, player_location_y))
+        elif direction == 1:
+            screen.blit(pygame.transform.flip(
+                player_images[loop_player_clock // 5], True, False), (player_location_x, player_location_y))
+        elif direction == 2:
+            screen.blit(pygame.transform.rotate(
+                player_images[loop_player_clock // 5], 90), (player_location_x, player_location_y))
+        elif direction == 3:
+            screen.blit(pygame.transform.rotate(
+                player_images[loop_player_clock // 5], 270), (player_location_x, player_location_y))
 
 
+# hàm vẽ các player khác
+def draw_other_player():
+    if len(other_player_data) > 0:
+        for other_player in other_player_data:
+            draw_player(other_player[7], other_player[8], other_player[1], other_player[2], other_player[3],
+                        other_player[0])
+
+
+# hàm kiểm tra đụng tường
 def check_position(location_x, location_y):
     turns = [False, False, False, False]  # Right, Left, Up, Down
     if map_level[location_y // 25][(location_x - speed_player) // 25] < 3:
@@ -252,49 +310,40 @@ def check_position(location_x, location_y):
     return turns
 
 
-def check_eat_food(score):
-    global ghost_is_slow
-    global ghost_speeds
-    global ghost_slow_time_count
-    height_a_rec = HEIGHT_PLAYING // len(map_level)
-    width_a_rec = WIDTH_PLAYING // len(map_level[0])
-    if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 1:
-        map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
-        score += 10
-    if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 2:
-        map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
-        score += 50
-        ghost_is_slow = True
-        ghost_speeds = [1, 1, 1, 1]
-        ghost_slow_time_count += ghost_slow_time_default
-    return score
-
-
-def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
-    if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
-            or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y + 25 < ghost_y + 25):
-        return True
-    else:
-        return False
-
-
-def player_dead(matrix):
-    global flicker_player
-    x, y = random_player_position(matrix)
-    flicker_player = True
-    return x, y
-
-
+# hàm vẽ tin nhắn
 def draw_message(list_message=0):
     pygame.draw.rect(screen, (55, 0, 0), (WIDTH_PLAYING, HEIGHT_SCORE_TABLE, WIDTH_BOX_CHAT, HEIGHT_BOX_CHAT))
 
 
-def draw_score(list_score=0):
-    pygame.draw.rect(screen, (255, 0, 0), (WIDTH_PLAYING, 0, WIDTH_SCORE_TABLE, HEIGHT_SCORE_TABLE))
+# hàm vẽ điểm
+def draw_score(data_score):
+    screen.blit(score_board_frame, (WIDTH_PLAYING, 0))
+    x_left = WIDTH_PLAYING + 30
+    y = 90
+    x_right = WIDTH_PLAYING + WIDTH_SCORE_TABLE - 30
+    count = 1
+    for name, score in data_score.items():
+        if name == nick_name:
+            font_score = pygame.font.Font(font_bold_part, 20)
+        else:
+            font_score = pygame.font.Font(font_regular_path, 20)
+        name_text = font_score.render(str(count) + ". " + name, True, text_score_color, None)
+        score_text = font_score.render(str(score), True, text_score_color, None)
+
+        # Lấy kích thước của tên và điểm số
+        name_rect = name_text.get_rect(left=x_left, centery=y)
+        score_rect = score_text.get_rect(right=x_right, centery=y)
+
+        # Vẽ tên và điểm số
+        screen.blit(name_text, name_rect)
+        screen.blit(score_text, score_rect)
+
+        # Dịch dòng tiếp theo
+        y += font_score.get_height()
+        count += 1
 
 
+# class ghost
 class Ghost:
     def __init__(self, x_pos, y_pos, speed, img, direct, dead):
         self.x_pos = x_pos
@@ -324,152 +373,58 @@ class Ghost:
                 count = 0
         return count
 
-    def check_position(self):
-        if map_level[self.y_pos // 25][(self.x_pos - self.speed) // 25] < 3:
-            self.turns[1] = True
-        if map_level[self.y_pos // 25][(self.x_pos + 25) // 25] < 3:
-            self.turns[0] = True
-        if map_level[(self.y_pos + 25) // 25][self.x_pos // 25] < 3:
-            self.turns[3] = True
-        if map_level[(self.y_pos - self.speed) // 25][self.x_pos // 25] < 3:
-            self.turns[2] = True
 
-    @staticmethod
-    def random_direction(list_direction):
-        return random.choice(list_direction)
-
-    def move(self):
-        # r, l, u, d
-        self.check_position()
-
-        if self.x_pos > WIDTH_PLAYING - 30:
-            self.x_pos = 15
-        if self.x_pos < 15:
-            self.x_pos = WIDTH_PLAYING - 30
-        if self.y_pos > HEIGHT_PLAYING - 30:
-            self.y_pos = 15
-        if self.y_pos < 15:
-            self.y_pos = HEIGHT_PLAYING - 30
-
-        if self.direction == 0:
-            if self.turns[0]:
-                self.x_pos += self.speed
-            else:
-                self.direction = self.random_direction([1, 2, 3])
-        elif self.direction == 1:
-            if self.turns[1]:
-                self.x_pos -= self.speed
-            else:
-                self.direction = self.random_direction([0, 2, 3])
-        elif self.direction == 2:
-            if self.turns[2]:
-                self.y_pos -= self.speed
-            else:
-                self.direction = self.random_direction([0, 1, 3])
-        elif self.direction == 3:
-            if self.turns[3]:
-                self.y_pos += self.speed
-            else:
-                self.direction = self.random_direction([0, 1, 2])
-        return self.x_pos, self.y_pos, self.direction
-
-
-game_running = True
-
-
-def receive_data():
-    while True:
-        timer.tick(fps * 2)
-        try:
-            # nhận dữ liệu từ server
-            # Nhận phản hồi từ server
-            response, server_address = client_socket.recvfrom(4096)
-            print(json.loads(response.decode()), "\n")
-        except Exception as e:
-            print(e)
-
-
+# hàm gửi data cho server
 def send_data():
+    player_dead_default = False
     json_data = json.dumps(
-        [nick_name, total_score, player_direction, player_x, player_y]
+        [nick_name, player_x, player_y, player_direction, player_dead_default, is_flickering_player, total_score,
+         is_visible_player, loop_count_player
+         ]
     )
     # gửi dữ liệu lên server
     client_socket.sendto(json_data.encode(), server_address)
 
 
-receive_thread = threading.Thread(target=receive_data)
-receive_thread.start()
-
+# game main
+game_running = True
 while game_running:
     # đặt fps
     timer.tick(fps)
 
+    # nếu player ngủm
+    if player_dead and not is_flickering_player:
+        is_flickering_player = True
+
+    # thời gian nhấp nháy pacman
+    if is_flickering_player and player_flicker_time_count > 0:
+        player_flicker_time_count -= 1
+        # nhấp nháy pacman
+        if count_flicker_player < 10:
+            count_flicker_player += 1
+            is_visible_player = False
+        elif count_flicker_player < 20:
+            count_flicker_player += 1
+            is_visible_player = True
+        else:
+            count_flicker_player = 0
+    else:
+        is_flickering_player = False
+        player_dead = False
+        is_visible_player = True
+        player_flicker_time_count = player_flicker_time_default
+
+    # gửi dữ liệu người chơi lên server
     send_data()
 
-    # va chạm với ma
-    collisions_red = check_collisions_ghost(player_x, player_y, red_ghost_x, red_ghost_y)
-    if collisions_red:
-        if ghost_is_slow and not red_ghost_dead:
-            red_ghost_y = len(map_level) // 2 * 25
-            red_ghost_x = len(map_level[0]) // 2 * 25
-            red_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_blue = check_collisions_ghost(player_x, player_y, blue_ghost_x, blue_ghost_y)
-    if collisions_blue:
-        if ghost_is_slow and not blue_ghost_dead:
-            blue_ghost_y = (len(map_level) - 1) // 2 * 25
-            blue_ghost_x = len(map_level[0]) // 2 * 25
-            blue_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_pink = check_collisions_ghost(player_x, player_y, pink_ghost_x, pink_ghost_y)
-    if collisions_pink:
-        if ghost_is_slow and not pink_ghost_dead:
-            pink_ghost_y = (len(map_level) - 2) // 2 * 25
-            pink_ghost_x = (len(map_level[0]) - 1) // 2 * 25
-            pink_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_orange = check_collisions_ghost(player_x, player_y, orange_ghost_x, orange_ghost_y)
-    if collisions_orange:
-        if ghost_is_slow and not orange_ghost_dead:
-            orange_ghost_y = len(map_level) // 2 * 25
-            orange_ghost_x = (len(map_level[0]) - 1) // 2 * 25
-            orange_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-
-    # thời gian ma hẹo
-    if red_ghost_dead and red_dead_time_count > 0:
-        red_dead_time_count -= 1
-    else:
-        red_ghost_dead = False
-        red_dead_time_count = red_dead_time_default
-    if blue_ghost_dead and blue_dead_time_count > 0:
-        blue_dead_time_count -= 1
-    else:
-        blue_ghost_dead = False
-        blue_dead_time_count = blue_dead_time_default
-    if pink_ghost_dead and pink_dead_time_count > 0:
-        pink_dead_time_count -= 1
-    else:
-        pink_ghost_dead = False
-        pink_dead_time_count = pink_dead_time_default
-    if orange_ghost_dead and orange_dead_time_count > 0:
-        orange_dead_time_count -= 1
-    else:
-        orange_ghost_dead = False
-        orange_dead_time_count = orange_dead_time_default
-
     # nhấp nháy thức ăn lớn
-    if loop_count_flicker_food < flick_food_after_loop:
-        loop_count_flicker_food += 1
+    if loop_flicker_food_clock < 50:
+        loop_flicker_food_clock += 1
         # thời gian ẩn
-        if loop_count_flicker_food > un_visible_food_loop:
+        if loop_flicker_food_clock > 10:
             flicker_food = False
     else:
-        loop_count_flicker_food = 0
+        loop_flicker_food_clock = 0
         flicker_food = True
 
     # cơ hàm pacman
@@ -478,32 +433,13 @@ while game_running:
     else:
         loop_count_player = 0
 
-    # thời gian slow mấy con ma
-    if ghost_is_slow and ghost_slow_time_count > 0:
-        ghost_slow_time_count -= 1
-    else:
-        ghost_is_slow = False
-        ghost_slow_time_count = 0
-        ghost_speeds = ghost_speeds_default
-
-    # thời gian nhấp nháy của pacman
-    if flicker_player and player_flicker_time_count > 0:
-        player_flicker_time_count -= 1
-    else:
-        flicker_player = False
-        player_flicker_time_count = player_flicker_time_default
-
     # đặt màu nền
     screen.fill(background_color)
 
-    # lấy điểm giữa của pacman
-    center_player_x = player_x + 12
-    center_player_y = player_y + 13
-
-    # Hướng được phép di chuyển
+    # Hướng được phép di chuyển của pacman
     turns_allowed = check_position(player_x, player_y)
 
-    #  Đi qua cổng nối
+    #  Đi qua cổng
     if player_x > WIDTH_PLAYING - 30:
         player_x = 15
     if player_x < 5:
@@ -515,55 +451,45 @@ while game_running:
 
     # gọi hàm vẽ các đối tượng lên màn hình
     # tường
-    draw_board()
+    draw_map()
 
     # pacman
-    if flicker_player:
-        draw_flicker_player()
-    else:
-        draw_player()
+    draw_player(is_visible_player, loop_count_player, player_x, player_y, player_direction, nick_name)
+
+    draw_other_player()
 
     # ma đỏ
     red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_image, red_ghost_direction, red_ghost_dead)
     flicker_red_ghost_clock = red_ghost.draw(flicker_red_ghost_clock)
-    if not red_ghost_dead:
-        red_ghost_x, red_ghost_y, red_ghost_direction = red_ghost.move()
 
     # ma xanh
     blue_ghost = Ghost(blue_ghost_x, blue_ghost_y, ghost_speeds[1], blue_ghost_image, blue_ghost_direction,
                        blue_ghost_dead)
     flicker_blue_ghost_clock = blue_ghost.draw(flicker_blue_ghost_clock)
-    if not blue_ghost_dead:
-        blue_ghost_x, blue_ghost_y, blue_ghost_direction = blue_ghost.move()
 
     # ma hồng
     pink_ghost = Ghost(pink_ghost_x, pink_ghost_y, ghost_speeds[2], pink_ghost_image, pink_ghost_direction,
                        pink_ghost_dead)
     flicker_pink_ghost_clock = pink_ghost.draw(flicker_pink_ghost_clock)
-    if not pink_ghost_dead:
-        pink_ghost_x, pink_ghost_y, pink_ghost_direction = pink_ghost.move()
 
     # ma cam
     orange_ghost = Ghost(orange_ghost_x, orange_ghost_y, ghost_speeds[3], orange_ghost_image, orange_ghost_direction,
                          orange_ghost_dead)
     flicker_orange_ghost_clock = orange_ghost.draw(flicker_orange_ghost_clock)
-    if not orange_ghost_dead:
-        orange_ghost_x, orange_ghost_y, orange_ghost_direction = orange_ghost.move()
 
     # score
-    total_score = check_eat_food(total_score)
-    draw_score()
+    draw_score(data_score_table)
 
     # tin nhắn
     draw_message()
 
-    # sự kiện điều khiển
+    # sự kiện
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             game_running = False
 
+    # Di chuyển player
     key_pressed = pygame.key.get_pressed()
-    # Di chuyển người chơi
     if key_pressed[pygame.K_w]:
         player_direction = 2
         if turns_allowed[2]:

@@ -11,7 +11,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Client 2"
+nick_name = "Client 4"
 
 # init pygame
 pygame.init()

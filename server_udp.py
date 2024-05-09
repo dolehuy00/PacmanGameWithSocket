@@ -13,7 +13,7 @@ server_socket.bind(server_address)
 
 # Danh sách các client đang kết nối
 connected_clients = set()
-data_arr = {}
+data_clients = {}
 
 # đặt kích thước các màn hình
 WIDTH_PLAYING = 900
@@ -295,10 +295,12 @@ def check_player_collisions_ghosts(player_location_x, player_location_y):
 
 
 # hàm kiểm tra ăn thức ăn
-def check_eat_food(score, player_location_x, player_location_y):
+def check_eat_food(player_location_x, player_location_y):
     global ghost_is_slow
     global ghost_speeds
     global ghost_slow_time_count
+    total_new_score = 0
+    eaten_food = False
     # lấy điểm giữa của pacman
     center_player_x = player_location_x + 12
     center_player_y = player_location_y + 13
@@ -307,24 +309,28 @@ def check_eat_food(score, player_location_x, player_location_y):
     width_a_rec = WIDTH_PLAYING // len(map_level[0])
     if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 1:
         map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
-        score += 10
+        total_new_score += 100
+        eaten_food = True
     if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 2:
         map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
-        score += 50
+        total_new_score += 500
+        eaten_food = True
         ghost_is_slow = True
         ghost_speeds = [1, 1, 1, 1]
         ghost_slow_time_count += ghost_slow_time_default
-    return score
+    return eaten_food, total_new_score
 
 
-# hàm gửi dữ liệu cho các client khác
+# hàm gửi dữ liệu map, ghost, other player cho các client khác
 def send_data():
     try:
         for client in connected_clients:
-            data_send = data_arr.copy()
-            data_send.pop(str(client))
+            data_send = {}
+            data_other_player = data_clients.copy()
+            data_other_player.pop(str(client))
             data_send["ghost"] = build_data_ghost()
             data_send["map"] = map_level
+            data_send["otherPlayer"] = list(data_other_player.values())
             if len(data_send) > 0:
                 server_socket.sendto(json.dumps(data_send).encode(), client)
     except:
@@ -333,17 +339,34 @@ def send_data():
 
 # hàm gửi data cho client gửi request
 def send_you_data(data_send, client):
-    print(data_send)
     server_socket.sendto(json.dumps(data_send).encode(), client)
+
+
+def handel_score_player():
+    while True:
+        pygame.time.Clock().tick(2)
+        if len(data_clients) > 0:
+            data_score_players = {}
+            for client_data in list(data_clients.values()):
+                data_score_players[client_data[0]] = client_data[6]
+            try:
+                sorted_score_table = dict(sorted(data_score_players.items(), key=lambda item: item[1], reverse=True))
+                for client in connected_clients:
+                    server_socket.sendto(json.dumps({"score_table": sorted_score_table}).encode(), client)
+            except:
+                pass
 
 
 # chạy luồng cho ma di chuyển
 run_ghost_thread = threading.Thread(target=run_ghost)
 run_ghost_thread.start()
 
+# luoofng guwwi bang xep hangj
+thread_send_data_to_all_client = threading.Thread(target=handel_score_player)
+thread_send_data_to_all_client.start()
+
 # nhận request từ client
 while True:
-    clock.tick(fps * 2)
     try:
         # Nhận dữ liệu từ client
         data, client_address = server_socket.recvfrom(4096)
@@ -358,27 +381,30 @@ while True:
             # check player dead
             player_is_dead = check_player_collisions_ghosts(player_x, player_y)
             if player_is_dead:
-                print("player_is_dead")
                 data_json[4] = player_is_dead
                 # random player
                 player_x, player_y = random_empty_position(map_level)
                 data_json[1] = player_x
                 data_json[2] = player_y
-                print(data_json)
                 # gửi lại dữ liệu cho các client
-                thread = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
-                thread.start()
+                thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+                thread_send_data_to_client.start()
         # check eat food
-        data_json[6] = check_eat_food(data_json[6], player_x, player_y)
+        is_eaten, score = check_eat_food(player_x, player_y)
+        if is_eaten:
+            data_json[6] += score
+            thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+            thread_send_data_to_client.start()
         # thêm dữ liệu vào gói
-        data_arr.update({str(client_address): data_json})
+        data_clients.update({str(client_address): data_json})
 
         # gửi lại dữ liệu cho các client
-        thread = threading.Thread(target=send_data)
-        thread.start()
+        thread_send_data_to_other_client = threading.Thread(target=send_data)
+        thread_send_data_to_other_client.start()
 
     except ConnectionResetError as e:
         # Xử lý khi một client ngắt kết nối
         connected_clients.clear()
-        data_arr.clear()
+        data_clients.clear()
         print("Client", client_address, "đã ngắt kết nối.")
+        print(e)

@@ -11,7 +11,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Client 2"
+nick_name = "Client 5"
 
 # init pygame
 pygame.init()
@@ -80,7 +80,9 @@ small_food = pygame.transform.scale(pygame.image.load("images/food/small_dot.png
 big_food = pygame.transform.scale(pygame.image.load("images/food/big_dot.png"), (25, 25))
 
 # tai hinh anh khung score
-score_board_frame = pygame.transform.scale(pygame.image.load("images/score/score_table.png"), (WIDTH_SCORE_TABLE, HEIGHT_SCORE_TABLE))
+score_board_frame = pygame.transform.scale(
+    pygame.image.load("images/score/score_table.png"), (WIDTH_SCORE_TABLE, HEIGHT_SCORE_TABLE))
+flower_score = pygame.transform.scale(pygame.image.load("images/score/flower.png"), (100, 100))
 
 # cài đặt thông tin thức ăn nhấp nháy
 flicker_food = False
@@ -318,6 +320,7 @@ def draw_message(list_message=0):
 # hàm vẽ điểm
 def draw_score(data_score):
     screen.blit(score_board_frame, (WIDTH_PLAYING, 0))
+    screen.blit(flower_score, (WIDTH_PLAYING-30, -20))
     x_left = WIDTH_PLAYING + 30
     y = 90
     x_right = WIDTH_PLAYING + WIDTH_SCORE_TABLE - 30
