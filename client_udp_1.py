@@ -39,34 +39,8 @@ icon = pygame.image.load("images/pacman/1.png")
 pygame.display.set_icon(icon)
 
 
-# ramdom food
-def random_to_number(matrix, num_to_replace=10, replace_to=1):
-    n = len(matrix)  # Số hàng của ma trận
-    m = len(matrix[0])  # Số cột của ma trận
-
-    # Tìm và chọn ngẫu nhiên các vị trí 0 để thay thế
-    replace_indices = []
-    for _ in range(num_to_replace):
-        while True:
-            i = random.randint(0, n - 1)  # Chọn một chỉ số hàng ngẫu nhiên
-            j = random.randint(0, m - 1)  # Chọn một chỉ số cột ngẫu nhiên
-            if matrix[i][j] == 0:  # Nếu giá trị tại vị trí này là 0, thì thêm vào danh sách và thoát vòng lặp
-                replace_indices.append((i, j))
-                break
-
-    # Thay thế các số 0 tại các vị trí đã chọn thành 1
-    for i, j in replace_indices:
-        matrix[i][j] = replace_to
-
-    return matrix
-
-
 # thông tin map
 map_level = copy.deepcopy(map_level_1)
-# số lượng thức ăn nhỏ
-map_level = random_to_number(map_level, 70)
-# số lượng thức ăn lớn
-map_level = random_to_number(map_level, 3, 2)
 
 # thông tin fps
 timer = pygame.time.Clock()
@@ -120,6 +94,108 @@ def random_empty_position(matrix):
         return None
 
 
+# thông tin mấy con ma
+ghost_is_slow = False
+ghost_slow_time_count = 0
+ghost_slow_time_default = 600
+
+# red_ghost_y, red_ghost_x = random_empty_position(map_level)
+red_ghost_x = 1 * 25
+red_ghost_y = 1 * 25
+red_ghost_direction = 0
+red_ghost_dead = False
+red_dead_time_count = 0
+red_dead_time_default = 400
+flicker_red_ghost_clock = 0
+
+# blue_ghost_y, blue_ghost_x = random_empty_position(map_level)
+blue_ghost_x = 1 * 25
+blue_ghost_y = 1 * 25
+blue_ghost_direction = 1
+blue_ghost_dead = False
+blue_dead_time_count = 0
+blue_dead_time_default = 400
+flicker_blue_ghost_clock = 0
+
+# orange_ghost_y, orange_ghost_x = random_empty_position(map_level)
+orange_ghost_x = 1 * 25
+orange_ghost_y = 1 * 25
+orange_ghost_direction = 2
+orange_ghost_dead = False
+orange_dead_time_count = 0
+orange_dead_time_default = 400
+flicker_orange_ghost_clock = 0
+
+# pink_ghost_y, pink_ghost_x = random_empty_position(map_level)
+pink_ghost_x = 1 * 25
+pink_ghost_y = 1 * 25
+pink_ghost_direction = 3
+pink_ghost_dead = False
+pink_dead_time_count = 0
+pink_dead_time_default = 400
+flicker_pink_ghost_clock = 0
+
+ghost_speeds_default = [3, 2, 2, 2]
+ghost_speeds = ghost_speeds_default
+
+
+def receive_data():
+    global red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default,\
+        flicker_red_ghost_clock, blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead, \
+        blue_dead_time_count, blue_dead_time_default, flicker_blue_ghost_clock, orange_ghost_x, orange_ghost_y,\
+        orange_ghost_direction, orange_ghost_dead, orange_dead_time_count, orange_dead_time_default,\
+        flicker_orange_ghost_clock, pink_ghost_x, pink_ghost_y, pink_ghost_direction, pink_ghost_dead,\
+        pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock, ghost_speeds, map_level
+    while True:
+        timer.tick(fps * 2)
+        try:
+            # Nhận phản hồi từ server
+            response, server_address = client_socket.recvfrom(4096)
+            data = json.loads(response.decode())
+            data_ghost = data["ghost"]
+            red_ghost_x = data_ghost[0]
+            red_ghost_y = data_ghost[1]
+            red_ghost_direction = data_ghost[2]
+            red_ghost_dead = data_ghost[3]
+            red_dead_time_count = data_ghost[4]
+            red_dead_time_default = data_ghost[5]
+            flicker_red_ghost_clock = data_ghost[6]
+
+            blue_ghost_x = data_ghost[7]
+            blue_ghost_y = data_ghost[8]
+            blue_ghost_direction = data_ghost[9]
+            blue_ghost_dead = data_ghost[10]
+            blue_dead_time_count = data_ghost[11]
+            blue_dead_time_default = data_ghost[12]
+            flicker_blue_ghost_clock = data_ghost[13]
+
+            orange_ghost_x = data_ghost[14]
+            orange_ghost_y = data_ghost[15]
+            orange_ghost_direction = data_ghost[16]
+            orange_ghost_dead = data_ghost[17]
+            orange_dead_time_count = data_ghost[18]
+            orange_dead_time_default = data_ghost[19]
+            flicker_orange_ghost_clock = data_ghost[20]
+
+            pink_ghost_x = data_ghost[21]
+            pink_ghost_y = data_ghost[22]
+            pink_ghost_direction = data_ghost[23]
+            pink_ghost_dead = data_ghost[24]
+            pink_dead_time_count = data_ghost[25]
+            pink_dead_time_default = data_ghost[26]
+            flicker_pink_ghost_clock = data_ghost[27]
+
+            ghost_speeds = data_ghost[28]
+
+            data_map = data["map"]
+            map_level = data_map
+        except Exception as e:
+            print(e)
+
+
+receive_thread = threading.Thread(target=receive_data)
+receive_thread.start()
+
 # thông tin của pacman
 player_y, player_x = random_empty_position(map_level)
 player_x = player_x * 25
@@ -135,50 +211,6 @@ flicker_player = False
 count_flicker_player = 0
 player_flicker_time_default = 200
 player_flicker_time_count = player_flicker_time_default
-
-# thông tin mấy con ma
-ghost_is_slow = False
-ghost_slow_time_count = 0
-ghost_slow_time_default = 600
-
-red_ghost_y, red_ghost_x = random_empty_position(map_level)
-red_ghost_x = red_ghost_x * 25
-red_ghost_y = red_ghost_y * 25
-red_ghost_direction = 0
-red_ghost_dead = False
-red_dead_time_count = 0
-red_dead_time_default = 400
-flicker_red_ghost_clock = 0
-
-blue_ghost_y, blue_ghost_x = random_empty_position(map_level)
-blue_ghost_x = blue_ghost_x * 25
-blue_ghost_y = blue_ghost_y * 25
-blue_ghost_direction = 1
-blue_ghost_dead = False
-blue_dead_time_count = 0
-blue_dead_time_default = 400
-flicker_blue_ghost_clock = 0
-
-orange_ghost_y, orange_ghost_x = random_empty_position(map_level)
-orange_ghost_x = orange_ghost_x * 25
-orange_ghost_y = orange_ghost_y * 25
-orange_ghost_direction = 2
-orange_ghost_dead = False
-orange_dead_time_count = 0
-orange_dead_time_default = 400
-flicker_orange_ghost_clock = 0
-
-pink_ghost_y, pink_ghost_x = random_empty_position(map_level)
-pink_ghost_x = pink_ghost_x * 25
-pink_ghost_y = pink_ghost_y * 25
-pink_ghost_direction = 3
-pink_ghost_dead = False
-pink_dead_time_count = 0
-pink_dead_time_default = 400
-flicker_pink_ghost_clock = 0
-
-ghost_speeds_default = [3, 2, 2, 2]
-ghost_speeds = ghost_speeds_default
 
 
 def random_player_position(matrix):
@@ -270,16 +302,6 @@ def check_eat_food(score):
     return score
 
 
-def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
-    if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
-            or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y + 25 < ghost_y + 25):
-        return True
-    else:
-        return False
-
-
 def player_dead(matrix):
     global flicker_player
     x, y = random_player_position(matrix)
@@ -324,118 +346,17 @@ class Ghost:
                 count = 0
         return count
 
-    def check_position(self):
-        if map_level[self.y_pos // 25][(self.x_pos - self.speed) // 25] < 3:
-            self.turns[1] = True
-        if map_level[self.y_pos // 25][(self.x_pos + 25) // 25] < 3:
-            self.turns[0] = True
-        if map_level[(self.y_pos + 25) // 25][self.x_pos // 25] < 3:
-            self.turns[3] = True
-        if map_level[(self.y_pos - self.speed) // 25][self.x_pos // 25] < 3:
-            self.turns[2] = True
-
-    @staticmethod
-    def random_direction(list_direction):
-        return random.choice(list_direction)
-
-    def move(self):
-        # r, l, u, d
-        self.check_position()
-
-        if self.x_pos > WIDTH_PLAYING - 30:
-            self.x_pos = 15
-        if self.x_pos < 15:
-            self.x_pos = WIDTH_PLAYING - 30
-        if self.y_pos > HEIGHT_PLAYING - 30:
-            self.y_pos = 15
-        if self.y_pos < 15:
-            self.y_pos = HEIGHT_PLAYING - 30
-
-        if self.direction == 0:
-            if self.turns[0]:
-                self.x_pos += self.speed
-            else:
-                self.direction = self.random_direction([1, 2, 3])
-        elif self.direction == 1:
-            if self.turns[1]:
-                self.x_pos -= self.speed
-            else:
-                self.direction = self.random_direction([0, 2, 3])
-        elif self.direction == 2:
-            if self.turns[2]:
-                self.y_pos -= self.speed
-            else:
-                self.direction = self.random_direction([0, 1, 3])
-        elif self.direction == 3:
-            if self.turns[3]:
-                self.y_pos += self.speed
-            else:
-                self.direction = self.random_direction([0, 1, 2])
-        return self.x_pos, self.y_pos, self.direction
-
 
 game_running = True
 
 
-def receive_data():
-    global red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default,\
-        flicker_red_ghost_clock, blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead, \
-        blue_dead_time_count, blue_dead_time_default, flicker_blue_ghost_clock, orange_ghost_x, orange_ghost_y,\
-        orange_ghost_direction, orange_ghost_dead, orange_dead_time_count, orange_dead_time_default,\
-        flicker_orange_ghost_clock, pink_ghost_x, pink_ghost_y, pink_ghost_direction, pink_ghost_dead,\
-        pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock
-    while True:
-        timer.tick(fps * 2)
-        try:
-            # Nhận phản hồi từ server
-            response, server_address = client_socket.recvfrom(4096)
-            data = json.loads(response.decode())
-            data_ghost = data["ghost"]
-            red_ghost_x = data_ghost[0]
-            red_ghost_y = data_ghost[1]
-            red_ghost_direction = data_ghost[2]
-            red_ghost_dead = data_ghost[3]
-            red_dead_time_count = data_ghost[4]
-            red_dead_time_default = data_ghost[5]
-            flicker_red_ghost_clock = data_ghost[6]
-
-            blue_ghost_x = data_ghost[7]
-            blue_ghost_y = data_ghost[8]
-            blue_ghost_direction = data_ghost[9]
-            blue_ghost_dead = data_ghost[10]
-            blue_dead_time_count = data_ghost[11]
-            blue_dead_time_default = data_ghost[12]
-            flicker_blue_ghost_clock = data_ghost[13]
-
-            orange_ghost_x = data_ghost[14]
-            orange_ghost_y = data_ghost[15]
-            orange_ghost_direction = data_ghost[16]
-            orange_ghost_dead = data_ghost[17]
-            orange_dead_time_count = data_ghost[18]
-            orange_dead_time_default = data_ghost[19]
-            flicker_orange_ghost_clock = data_ghost[20]
-
-            pink_ghost_x = data_ghost[21]
-            pink_ghost_y = data_ghost[22]
-            pink_ghost_direction = data_ghost[23]
-            pink_ghost_dead = data_ghost[24]
-            pink_dead_time_count = data_ghost[25]
-            pink_dead_time_default = data_ghost[26]
-            flicker_pink_ghost_clock = data_ghost[27]
-        except Exception as e:
-            print(e)
-
-
 def send_data():
     json_data = json.dumps(
-        [nick_name, total_score, player_direction, player_x, player_y]
+        [nick_name, total_score, player_x, player_y, player_direction]
     )
     # gửi dữ liệu lên server
     client_socket.sendto(json_data.encode(), server_address)
 
-
-receive_thread = threading.Thread(target=receive_data)
-receive_thread.start()
 
 while game_running:
     # đặt fps
@@ -444,38 +365,38 @@ while game_running:
     send_data()
 
     # va chạm với ma
-    collisions_red = check_collisions_ghost(player_x, player_y, red_ghost_x, red_ghost_y)
-    if collisions_red:
-        if ghost_is_slow and not red_ghost_dead:
-            red_ghost_y = len(map_level) // 2 * 25
-            red_ghost_x = len(map_level[0]) // 2 * 25
-            red_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_blue = check_collisions_ghost(player_x, player_y, blue_ghost_x, blue_ghost_y)
-    if collisions_blue:
-        if ghost_is_slow and not blue_ghost_dead:
-            blue_ghost_y = (len(map_level) - 1) // 2 * 25
-            blue_ghost_x = len(map_level[0]) // 2 * 25
-            blue_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_pink = check_collisions_ghost(player_x, player_y, pink_ghost_x, pink_ghost_y)
-    if collisions_pink:
-        if ghost_is_slow and not pink_ghost_dead:
-            pink_ghost_y = (len(map_level) - 2) // 2 * 25
-            pink_ghost_x = (len(map_level[0]) - 1) // 2 * 25
-            pink_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
-    collisions_orange = check_collisions_ghost(player_x, player_y, orange_ghost_x, orange_ghost_y)
-    if collisions_orange:
-        if ghost_is_slow and not orange_ghost_dead:
-            orange_ghost_y = len(map_level) // 2 * 25
-            orange_ghost_x = (len(map_level[0]) - 1) // 2 * 25
-            orange_ghost_dead = True
-        else:
-            player_x, player_y = player_dead(map_level)
+    # collisions_red = check_collisions_ghost(player_x, player_y, red_ghost_x, red_ghost_y)
+    # if collisions_red:
+    #     if ghost_is_slow and not red_ghost_dead:
+    #         red_ghost_y = len(map_level) // 2 * 25
+    #         red_ghost_x = len(map_level[0]) // 2 * 25
+    #         red_ghost_dead = True
+    #     else:
+    #         player_x, player_y = player_dead(map_level)
+    # collisions_blue = check_collisions_ghost(player_x, player_y, blue_ghost_x, blue_ghost_y)
+    # if collisions_blue:
+    #     if ghost_is_slow and not blue_ghost_dead:
+    #         blue_ghost_y = (len(map_level) - 1) // 2 * 25
+    #         blue_ghost_x = len(map_level[0]) // 2 * 25
+    #         blue_ghost_dead = True
+    #     else:
+    #         player_x, player_y = player_dead(map_level)
+    # collisions_pink = check_collisions_ghost(player_x, player_y, pink_ghost_x, pink_ghost_y)
+    # if collisions_pink:
+    #     if ghost_is_slow and not pink_ghost_dead:
+    #         pink_ghost_y = (len(map_level) - 2) // 2 * 25
+    #         pink_ghost_x = (len(map_level[0]) - 1) // 2 * 25
+    #         pink_ghost_dead = True
+    #     else:
+    #         player_x, player_y = player_dead(map_level)
+    # collisions_orange = check_collisions_ghost(player_x, player_y, orange_ghost_x, orange_ghost_y)
+    # if collisions_orange:
+    #     if ghost_is_slow and not orange_ghost_dead:
+    #         orange_ghost_y = len(map_level) // 2 * 25
+    #         orange_ghost_x = (len(map_level[0]) - 1) // 2 * 25
+    #         orange_ghost_dead = True
+    #     else:
+    #         player_x, player_y = player_dead(map_level)
 
     # thời gian ma hẹo
     if red_ghost_dead and red_dead_time_count > 0:

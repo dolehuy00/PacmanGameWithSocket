@@ -20,6 +20,7 @@ WIDTH_PLAYING = 900
 HEIGHT_PLAYING = 750
 
 
+# ramdom food
 def random_to_number(matrix, num_to_replace=10, replace_to=1):
     n = len(matrix)  # Số hàng của ma trận
     m = len(matrix[0])  # Số cột của ma trận
@@ -48,6 +49,11 @@ def random_empty_position(matrix):
         return random.choice(empty_positions)
     else:
         return None
+
+
+# thông tin fps
+clock = pygame.time.Clock()
+fps = 60
 
 
 # thông tin map
@@ -164,11 +170,21 @@ class Ghost:
         return self.x_pos, self.y_pos, self.direction
 
 
+def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
+    if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
+            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
+            or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
+            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y + 25 < ghost_y + 25):
+        return True
+    else:
+        return False
+
+
 def run_ghost():
     global red_ghost_x, red_ghost_y, red_ghost_direction, blue_ghost_x, blue_ghost_y, blue_ghost_direction, \
         pink_ghost_x, pink_ghost_y, pink_ghost_direction, orange_ghost_x, orange_ghost_y, orange_ghost_direction
     while True:
-        pygame.time.Clock().tick(60)
+        clock.tick(fps)
         # ma đỏ
         red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_direction, red_ghost_dead)
         if not red_ghost_dead:
@@ -200,7 +216,7 @@ def build_data_ghost():
             blue_dead_time_count, blue_dead_time_default, flicker_blue_ghost_clock, orange_ghost_x, orange_ghost_y,
             orange_ghost_direction, orange_ghost_dead, orange_dead_time_count, orange_dead_time_default,
             flicker_orange_ghost_clock, pink_ghost_x, pink_ghost_y, pink_ghost_direction, pink_ghost_dead,
-            pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock
+            pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock, ghost_speeds
     ]
 
 
@@ -210,6 +226,7 @@ def send_data():
             data_send = data_arr.copy()
             data_send.pop(str(client))
             data_send["ghost"] = build_data_ghost()
+            data_send["map"] = map_level
             if len(data_send) > 0:
                 server_socket.sendto(json.dumps(data_send).encode(), client)
     except:
@@ -220,7 +237,7 @@ run_ghost_thread = threading.Thread(target=run_ghost)
 run_ghost_thread.start()
 
 while True:
-    pygame.time.Clock().tick(120)
+    clock.tick(fps * 2)
     try:
         # Nhận dữ liệu từ client
         data, client_address = server_socket.recvfrom(4096)
