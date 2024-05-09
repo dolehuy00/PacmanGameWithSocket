@@ -42,13 +42,19 @@ def random_to_number(matrix, num_to_replace=10, replace_to=1):
     return matrix
 
 
-# random pacman ra vị trí còn trống ngẫu nhiên
-def random_empty_position(matrix):
+# tìm vị trí trống trong matrix map
+def random_empty_position_in_map(matrix):
     empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
     if empty_positions:
         return random.choice(empty_positions)
     else:
         return None
+
+
+# random và tính toán vị trí trống
+def random_empty_position(matrix):
+    y, x = random_empty_position_in_map(matrix)
+    return x * 25, y * 25
 
 
 # thông tin fps
@@ -68,46 +74,35 @@ ghost_is_slow = False
 ghost_slow_time_count = 0
 ghost_slow_time_default = 600
 
-red_ghost_y, red_ghost_x = random_empty_position(map_level)
-red_ghost_x = red_ghost_x * 25
-red_ghost_y = red_ghost_y * 25
+red_ghost_x, red_ghost_y = random_empty_position(map_level)
 red_ghost_direction = 0
 red_ghost_dead = False
 red_dead_time_count = 0
 red_dead_time_default = 400
-flicker_red_ghost_clock = 0
 
-blue_ghost_y, blue_ghost_x = random_empty_position(map_level)
-blue_ghost_x = blue_ghost_x * 25
-blue_ghost_y = blue_ghost_y * 25
+blue_ghost_x, blue_ghost_y = random_empty_position(map_level)
 blue_ghost_direction = 1
 blue_ghost_dead = False
 blue_dead_time_count = 0
 blue_dead_time_default = 400
-flicker_blue_ghost_clock = 0
 
-orange_ghost_y, orange_ghost_x = random_empty_position(map_level)
-orange_ghost_x = orange_ghost_x * 25
-orange_ghost_y = orange_ghost_y * 25
+orange_ghost_x, orange_ghost_y = random_empty_position(map_level)
 orange_ghost_direction = 2
 orange_ghost_dead = False
 orange_dead_time_count = 0
 orange_dead_time_default = 400
-flicker_orange_ghost_clock = 0
 
-pink_ghost_y, pink_ghost_x = random_empty_position(map_level)
-pink_ghost_x = pink_ghost_x * 25
-pink_ghost_y = pink_ghost_y * 25
+pink_ghost_x, pink_ghost_y = random_empty_position(map_level)
 pink_ghost_direction = 3
 pink_ghost_dead = False
 pink_dead_time_count = 0
 pink_dead_time_default = 400
-flicker_pink_ghost_clock = 0
 
 ghost_speeds_default = [3, 2, 2, 2]
 ghost_speeds = ghost_speeds_default
 
 
+# lớp ma
 class Ghost:
     def __init__(self, x_pos, y_pos, speed, direct, dead):
         self.x_pos = x_pos
@@ -170,7 +165,8 @@ class Ghost:
         return self.x_pos, self.y_pos, self.direction
 
 
-def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
+# hàm kiểm tra va chạm với 1 ma
+def check_collision_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
     if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
             or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
             or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
@@ -180,11 +176,46 @@ def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_
         return False
 
 
+# hàm cho ma di chuyển
 def run_ghost():
     global red_ghost_x, red_ghost_y, red_ghost_direction, blue_ghost_x, blue_ghost_y, blue_ghost_direction, \
-        pink_ghost_x, pink_ghost_y, pink_ghost_direction, orange_ghost_x, orange_ghost_y, orange_ghost_direction
+        pink_ghost_x, pink_ghost_y, pink_ghost_direction, orange_ghost_x, orange_ghost_y, orange_ghost_direction, \
+        red_ghost_dead, red_dead_time_count, blue_ghost_dead, blue_dead_time_count, pink_ghost_dead, \
+        pink_dead_time_count, orange_ghost_dead, orange_dead_time_count, ghost_is_slow, ghost_slow_time_count, \
+        ghost_speeds
     while True:
         clock.tick(fps)
+
+        # thời gian ma hẹo
+        if red_ghost_dead and red_dead_time_count > 0:
+            red_dead_time_count -= 1
+        else:
+            red_ghost_dead = False
+            red_dead_time_count = red_dead_time_default
+        if blue_ghost_dead and blue_dead_time_count > 0:
+            blue_dead_time_count -= 1
+        else:
+            blue_ghost_dead = False
+            blue_dead_time_count = blue_dead_time_default
+        if pink_ghost_dead and pink_dead_time_count > 0:
+            pink_dead_time_count -= 1
+        else:
+            pink_ghost_dead = False
+            pink_dead_time_count = pink_dead_time_default
+        if orange_ghost_dead and orange_dead_time_count > 0:
+            orange_dead_time_count -= 1
+        else:
+            orange_ghost_dead = False
+            orange_dead_time_count = orange_dead_time_default
+
+        # thời gian slow mấy con ma
+        if ghost_is_slow and ghost_slow_time_count > 0:
+            ghost_slow_time_count -= 1
+        else:
+            ghost_is_slow = False
+            ghost_slow_time_count = 0
+            ghost_speeds = ghost_speeds_default
+
         # ma đỏ
         red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_direction, red_ghost_dead)
         if not red_ghost_dead:
@@ -209,17 +240,84 @@ def run_ghost():
             orange_ghost_x, orange_ghost_y, orange_ghost_direction = orange_ghost.move()
 
 
+# hàm đóng gói dữ liệu ma
 def build_data_ghost():
     return [
-            red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default,
-            flicker_red_ghost_clock, blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead,
-            blue_dead_time_count, blue_dead_time_default, flicker_blue_ghost_clock, orange_ghost_x, orange_ghost_y,
-            orange_ghost_direction, orange_ghost_dead, orange_dead_time_count, orange_dead_time_default,
-            flicker_orange_ghost_clock, pink_ghost_x, pink_ghost_y, pink_ghost_direction, pink_ghost_dead,
-            pink_dead_time_count, pink_dead_time_default, flicker_pink_ghost_clock, ghost_speeds
+            red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count,
+            red_dead_time_default, blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead,
+            blue_dead_time_count, blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction,
+            orange_ghost_dead, orange_dead_time_count, orange_dead_time_default, pink_ghost_x, pink_ghost_y,
+            pink_ghost_direction, pink_ghost_dead, pink_dead_time_count, pink_dead_time_default, ghost_speeds,
+            ghost_is_slow
     ]
 
 
+# hàm kiểm tra va chạm với các con ma
+def check_player_collisions_ghosts(player_location_x, player_location_y):
+    global red_ghost_x, red_ghost_y, blue_ghost_x, blue_ghost_y, pink_ghost_x, pink_ghost_y, orange_ghost_x,\
+        orange_ghost_y, red_ghost_dead, blue_ghost_dead, pink_ghost_dead, orange_ghost_dead
+    player_dead = True
+    # va chạm với ma
+    collisions_red = check_collision_ghost(player_location_x, player_location_y, red_ghost_x, red_ghost_y)
+    if collisions_red:
+        if ghost_is_slow and not red_ghost_dead:
+            red_ghost_y = len(map_level) // 2 * 25
+            red_ghost_x = len(map_level[0]) // 2 * 25
+            red_ghost_dead = True
+        else:
+            return player_dead
+    collisions_blue = check_collision_ghost(player_location_x, player_location_y, blue_ghost_x, blue_ghost_y)
+    if collisions_blue:
+        if ghost_is_slow and not blue_ghost_dead:
+            blue_ghost_y = (len(map_level) - 1) // 2 * 25
+            blue_ghost_x = len(map_level[0]) // 2 * 25
+            blue_ghost_dead = True
+        else:
+            return player_dead
+    collisions_pink = check_collision_ghost(player_location_x, player_location_y, pink_ghost_x, pink_ghost_y)
+    if collisions_pink:
+        if ghost_is_slow and not pink_ghost_dead:
+            pink_ghost_y = (len(map_level) - 2) // 2 * 25
+            pink_ghost_x = (len(map_level[0]) - 1) // 2 * 25
+            pink_ghost_dead = True
+        else:
+            return player_dead
+    collisions_orange = check_collision_ghost(player_location_x, player_location_y, orange_ghost_x, orange_ghost_y)
+    if collisions_orange:
+        if ghost_is_slow and not orange_ghost_dead:
+            orange_ghost_y = len(map_level) // 2 * 25
+            orange_ghost_x = (len(map_level[0]) - 1) // 2 * 25
+            orange_ghost_dead = True
+        else:
+            return player_dead
+
+    return False
+
+
+# hàm kiểm tra ăn thức ăn
+def check_eat_food(score, player_location_x, player_location_y):
+    global ghost_is_slow
+    global ghost_speeds
+    global ghost_slow_time_count
+    # lấy điểm giữa của pacman
+    center_player_x = player_location_x + 12
+    center_player_y = player_location_y + 13
+    # lấy kích thước 1 ô
+    height_a_rec = HEIGHT_PLAYING // len(map_level)
+    width_a_rec = WIDTH_PLAYING // len(map_level[0])
+    if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 1:
+        map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
+        score += 10
+    if map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] == 2:
+        map_level[center_player_y // height_a_rec][center_player_x // width_a_rec] = 0
+        score += 50
+        ghost_is_slow = True
+        ghost_speeds = [1, 1, 1, 1]
+        ghost_slow_time_count += ghost_slow_time_default
+    return score
+
+
+# hàm gửi dữ liệu cho các client khác
 def send_data():
     try:
         for client in connected_clients:
@@ -233,9 +331,17 @@ def send_data():
         pass
 
 
+# hàm gửi data cho client gửi request
+def send_you_data(data_send, client):
+    print(data_send)
+    server_socket.sendto(json.dumps(data_send).encode(), client)
+
+
+# chạy luồng cho ma di chuyển
 run_ghost_thread = threading.Thread(target=run_ghost)
 run_ghost_thread.start()
 
+# nhận request từ client
 while True:
     clock.tick(fps * 2)
     try:
@@ -244,7 +350,28 @@ while True:
 
         # xử lý dữ liệu nhận được
         connected_clients.add(client_address)
-        data_arr.update({str(client_address): json.loads(data.decode())})
+        data_json = json.loads(data.decode())
+        player_x = data_json[1]
+        player_y = data_json[2]
+        # check flicker
+        if not data_json[5]:
+            # check player dead
+            player_is_dead = check_player_collisions_ghosts(player_x, player_y)
+            if player_is_dead:
+                print("player_is_dead")
+                data_json[4] = player_is_dead
+                # random player
+                player_x, player_y = random_empty_position(map_level)
+                data_json[1] = player_x
+                data_json[2] = player_y
+                print(data_json)
+                # gửi lại dữ liệu cho các client
+                thread = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+                thread.start()
+        # check eat food
+        data_json[6] = check_eat_food(data_json[6], player_x, player_y)
+        # thêm dữ liệu vào gói
+        data_arr.update({str(client_address): data_json})
 
         # gửi lại dữ liệu cho các client
         thread = threading.Thread(target=send_data)
