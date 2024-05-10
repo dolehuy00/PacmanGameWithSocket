@@ -61,6 +61,8 @@ git clone https://github.com/dolehuy00/PacmanGameWithSocket.git
 ```
 
 # Khởi động Trò Chơi
+Mở Terminal và di chuyển đến thư mục chứa mã nguồn của trò chơi. Chạy lệnh để khởi động
+trò chơi Pacman.
 ## Chạy server
 
 ```bash
