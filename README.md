@@ -68,7 +68,6 @@ trò chơi Pacman.
 ```bash
 python server_data_udp.py
 python server_chat_tcp.py
-python client_1.py
 ```
 
 ##  Chạy client
