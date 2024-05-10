@@ -313,13 +313,13 @@ def check_player_collisions_ghosts(player_location_x, player_location_y):
 
 
 # ham va cham nguoi choi khac
-def check_player_collisions_other_players(player_location_x, player_location_y, client):
+def check_player_collisions_other_players(player_location_x, player_location_y, client, you_is_slowing):
     global thread_send_data_to_client
     score_increase = 0
     for key, value in data_clients.items():
         if client != key:
             # if slowing
-            if value[9]:
+            if value[9] and not you_is_slowing:
                 result = check_collision_ghost_or_other_player(player_location_x, player_location_y, value[1], value[2])
                 # and not flicker
                 if result and not value[5]:
@@ -517,7 +517,7 @@ while running:
                                                               args=({"you": data_json}, client_address,))
                 thread_send_data_to_client.start()
         # check va cham voi nguoi choi khac
-        score_increase = check_player_collisions_other_players(player_x, player_y, str(client_address))
+        score_increase = check_player_collisions_other_players(player_x, player_y, str(client_address), data_json[9])
         if score_increase > 0:
             data_json[6] += score_increase
             thread_send_data_to_client = threading.Thread(target=send_you_data,
