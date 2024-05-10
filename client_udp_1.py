@@ -5,13 +5,39 @@ import random
 import socket
 import threading
 import json
+from message_box import MessageBox
+from input_box import InputBox
+from datetime import datetime
+
+
+# tìm vị trí trống trong matrix map
+def random_empty_position_in_map(matrix):
+    empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
+    if empty_positions:
+        return random.choice(empty_positions)
+    else:
+        return None
+
+
+# random và tính toán vị trí trống
+def random_empty_position(matrix):
+    y, x = random_empty_position_in_map(matrix)
+    return x * 25, y * 25
+
 
 # Tạo socket client
 client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_address = ('localhost', 12345)
 
 # nickname
-nick_name = "Client 1"
+nick_name = "Client1"
+
+# khai báo ip và port cho server chat
+host_server_chat = '127.0.0.1'
+port_server_chat = 55555
+# tạo socket và kết nối tới server trên host và port
+client_message = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_message.connect((host_server_chat, port_server_chat))
 
 # init pygame
 pygame.init()
@@ -38,7 +64,6 @@ pygame.display.set_caption("Pacman")
 icon = pygame.image.load("images/pacman/1.png")
 pygame.display.set_icon(icon)
 
-
 # thông tin map
 map_level = copy.deepcopy(map_level_1)
 
@@ -49,7 +74,6 @@ fps = 60
 # tải phông chữ
 font_regular_path = "font/Roboto/Roboto-Regular.ttf"
 font_bold_part = "font/Roboto/Roboto-Bold.ttf"
-font = pygame.font.Font(font_regular_path, 20)
 
 # màu nền
 background_color = (45, 45, 45)
@@ -84,25 +108,13 @@ score_board_frame = pygame.transform.scale(
     pygame.image.load("images/score/score_table.png"), (WIDTH_SCORE_TABLE, HEIGHT_SCORE_TABLE))
 flower_score = pygame.transform.scale(pygame.image.load("images/score/flower.png"), (100, 100))
 
+# tai hinh anh khung message box
+message_box_frame = pygame.transform.scale(pygame.image.load("images/message_box/message_box_frame.png"),
+                                           (WIDTH_BOX_CHAT, HEIGHT_BOX_CHAT))
+
 # cài đặt thông tin thức ăn nhấp nháy
 flicker_food = False
 loop_flicker_food_clock = 0
-
-
-# tìm vị trí trống trong matrix map
-def random_empty_position_in_map(matrix):
-    empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
-    if empty_positions:
-        return random.choice(empty_positions)
-    else:
-        return None
-
-
-# random và tính toán vị trí trống
-def random_empty_position(matrix):
-    y, x = random_empty_position_in_map(matrix)
-    return x * 25, y * 25
-
 
 # thông tin mấy con ma
 ghost_is_slow = False
@@ -167,12 +179,25 @@ other_player_data = []
 data_score_table = {}
 text_score_color = (112, 74, 53)
 
+# tthong tin box chat
+message_box_frame_color = (185, 122, 87)
+message_box_frame_center_color = (181, 230, 29)
+font_text_input_message = pygame.font.Font(font_regular_path, 15)
+limit_text_length_message = 40
+text_message_color = (112, 74, 53)
+input_text_box_message = InputBox(WIDTH_PLAYING + 25, HEIGHT_PLAYING - 50, 250, "", limit_text_length_message,
+                                  font_text_input_message, text_message_color, message_box_frame_color,
+                                  message_box_frame_center_color, 10)
+background_message_box = (176, 176, 176)
+message_box = MessageBox(WIDTH_PLAYING + 25, HEIGHT_SCORE_TABLE + 25, WIDTH_BOX_CHAT - 50, HEIGHT_BOX_CHAT - 120,
+                         background_message_box, text_message_color, font_text_input_message, 10, screen)
+
 
 # hàm nhận dữ liệu từ server
 def receive_data():
     global red_ghost_x, red_ghost_y, red_ghost_direction, red_ghost_dead, red_dead_time_count, red_dead_time_default, \
         blue_ghost_x, blue_ghost_y, blue_ghost_direction, blue_ghost_dead, blue_dead_time_count, \
-        blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction, orange_ghost_dead,\
+        blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction, orange_ghost_dead, \
         orange_dead_time_count, orange_dead_time_default, pink_ghost_x, pink_ghost_y, pink_ghost_direction, \
         pink_ghost_dead, pink_dead_time_count, pink_dead_time_default, ghost_speeds, map_level, player_dead, \
         player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table
@@ -235,8 +260,8 @@ def receive_data():
             if data_score is not None:
                 data_score_table = data_score
 
-        except Exception as e:
-            print("exception", e)
+        except:
+            pass
 
 
 # chạy luồng riêng để nhận dữ liệu
@@ -312,14 +337,17 @@ def check_position(location_x, location_y):
 
 
 # hàm vẽ tin nhắn
-def draw_message(list_message=0):
-    pygame.draw.rect(screen, (55, 0, 0), (WIDTH_PLAYING, HEIGHT_SCORE_TABLE, WIDTH_BOX_CHAT, HEIGHT_BOX_CHAT))
+def draw_message_box():
+    screen.blit(message_box_frame, (WIDTH_PLAYING, HEIGHT_SCORE_TABLE))
+    input_text_box_message.draw(screen)
+
+    message_box.draw(nick_name)
 
 
 # hàm vẽ điểm
 def draw_score(data_score):
     screen.blit(score_board_frame, (WIDTH_PLAYING, 0))
-    screen.blit(flower_score, (WIDTH_PLAYING-30, -20))
+    screen.blit(flower_score, (WIDTH_PLAYING - 30, -20))
     x_left = WIDTH_PLAYING + 30
     y = 90
     x_right = WIDTH_PLAYING + WIDTH_SCORE_TABLE - 30
@@ -388,126 +416,169 @@ def send_data():
     client_socket.sendto(json_data.encode(), server_address)
 
 
+# hàm gui dữ liệu chat
+def send_message(message):
+    # gửi dữ liệu
+    client_message.send(json.dumps(message).encode())
+
+
+# hàm nhận thông tin chat tu server
+def receive_message():
+    while True:
+        # nhận dữ liệu từ server
+        data = client_message.recv(1024).decode()
+        if data == "NICKNAME":
+            client_message.send(json.dumps(["", nick_name, "Join the room!"]).encode())
+        else:
+            json_data = json.loads(data)
+            message_box.add_message(json_data)
+
+
+# tạo thread nhận dữ liệu chat
+receive_thread = threading.Thread(target=receive_message)
+receive_thread.start()
+
+
+# ham xu ly khi nhan enter box chat
+def handle_enter_input_box_message(text):
+    # Lấy thời gian hiện tại
+    current_time = datetime.now()
+    # Lấy giờ và phút hiện tại
+    current_hour = current_time.hour
+    current_minute = current_time.minute
+    message = [f"{current_hour}:{current_minute}", nick_name, text]
+    # tạo thread gui dữ liệu chat
+    write_thread = threading.Thread(target=send_message, args=(message,))
+    write_thread.start()
+
+
 # game main
 game_running = True
 while game_running:
-    # đặt fps
-    timer.tick(fps)
+    try:
+        # đặt fps
+        timer.tick(fps)
 
-    # nếu player ngủm
-    if player_dead and not is_flickering_player:
-        is_flickering_player = True
+        # sự kiện
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_running = False
+            if len(input_text_box_message.text) < limit_text_length_message + 1:
+                input_text_box_message.handle_event(event, handle_enter_input_box_message)
+            message_box.handle_event(event)
 
-    # thời gian nhấp nháy pacman
-    if is_flickering_player and player_flicker_time_count > 0:
-        player_flicker_time_count -= 1
-        # nhấp nháy pacman
-        if count_flicker_player < 10:
-            count_flicker_player += 1
-            is_visible_player = False
-        elif count_flicker_player < 20:
-            count_flicker_player += 1
-            is_visible_player = True
+        # nếu player ngủm
+        if player_dead and not is_flickering_player:
+            is_flickering_player = True
+
+        # thời gian nhấp nháy pacman
+        if is_flickering_player and player_flicker_time_count > 0:
+            player_flicker_time_count -= 1
+            # nhấp nháy pacman
+            if count_flicker_player < 10:
+                count_flicker_player += 1
+                is_visible_player = False
+            elif count_flicker_player < 20:
+                count_flicker_player += 1
+                is_visible_player = True
+            else:
+                count_flicker_player = 0
         else:
-            count_flicker_player = 0
-    else:
-        is_flickering_player = False
-        player_dead = False
-        is_visible_player = True
-        player_flicker_time_count = player_flicker_time_default
+            is_flickering_player = False
+            player_dead = False
+            is_visible_player = True
+            player_flicker_time_count = player_flicker_time_default
 
-    # gửi dữ liệu người chơi lên server
-    send_data()
+        # gửi dữ liệu người chơi lên server
+        send_data()
 
-    # nhấp nháy thức ăn lớn
-    if loop_flicker_food_clock < 50:
-        loop_flicker_food_clock += 1
-        # thời gian ẩn
-        if loop_flicker_food_clock > 10:
-            flicker_food = False
-    else:
-        loop_flicker_food_clock = 0
-        flicker_food = True
+        # nhấp nháy thức ăn lớn
+        if loop_flicker_food_clock < 50:
+            loop_flicker_food_clock += 1
+            # thời gian ẩn
+            if loop_flicker_food_clock > 10:
+                flicker_food = False
+        else:
+            loop_flicker_food_clock = 0
+            flicker_food = True
 
-    # cơ hàm pacman
-    if loop_count_player < 19:
-        loop_count_player += 1
-    else:
-        loop_count_player = 0
+        # cơ hàm pacman
+        if loop_count_player < 19:
+            loop_count_player += 1
+        else:
+            loop_count_player = 0
 
-    # đặt màu nền
-    screen.fill(background_color)
+        # đặt màu nền
+        screen.fill(background_color)
 
-    # Hướng được phép di chuyển của pacman
-    turns_allowed = check_position(player_x, player_y)
+        # Hướng được phép di chuyển của pacman
+        turns_allowed = check_position(player_x, player_y)
 
-    #  Đi qua cổng
-    if player_x > WIDTH_PLAYING - 30:
-        player_x = 15
-    if player_x < 5:
-        player_x = WIDTH_PLAYING - 30
-    if player_y > HEIGHT_PLAYING - 30:
-        player_y = 5
-    if player_y < 5:
-        player_y = HEIGHT_PLAYING - 30
+        #  Đi qua cổng
+        if player_x > WIDTH_PLAYING - 30:
+            player_x = 15
+        if player_x < 5:
+            player_x = WIDTH_PLAYING - 30
+        if player_y > HEIGHT_PLAYING - 30:
+            player_y = 5
+        if player_y < 5:
+            player_y = HEIGHT_PLAYING - 30
 
-    # gọi hàm vẽ các đối tượng lên màn hình
-    # tường
-    draw_map()
+        # gọi hàm vẽ các đối tượng lên màn hình
+        # tường
+        draw_map()
 
-    # pacman
-    draw_player(is_visible_player, loop_count_player, player_x, player_y, player_direction, nick_name)
+        # pacman
+        draw_player(is_visible_player, loop_count_player, player_x, player_y, player_direction, nick_name)
 
-    draw_other_player()
+        draw_other_player()
 
-    # ma đỏ
-    red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_image, red_ghost_direction, red_ghost_dead)
-    flicker_red_ghost_clock = red_ghost.draw(flicker_red_ghost_clock)
+        # ma đỏ
+        red_ghost = Ghost(red_ghost_x, red_ghost_y, ghost_speeds[0], red_ghost_image, red_ghost_direction, red_ghost_dead)
+        flicker_red_ghost_clock = red_ghost.draw(flicker_red_ghost_clock)
 
-    # ma xanh
-    blue_ghost = Ghost(blue_ghost_x, blue_ghost_y, ghost_speeds[1], blue_ghost_image, blue_ghost_direction,
-                       blue_ghost_dead)
-    flicker_blue_ghost_clock = blue_ghost.draw(flicker_blue_ghost_clock)
+        # ma xanh
+        blue_ghost = Ghost(blue_ghost_x, blue_ghost_y, ghost_speeds[1], blue_ghost_image, blue_ghost_direction,
+                           blue_ghost_dead)
+        flicker_blue_ghost_clock = blue_ghost.draw(flicker_blue_ghost_clock)
 
-    # ma hồng
-    pink_ghost = Ghost(pink_ghost_x, pink_ghost_y, ghost_speeds[2], pink_ghost_image, pink_ghost_direction,
-                       pink_ghost_dead)
-    flicker_pink_ghost_clock = pink_ghost.draw(flicker_pink_ghost_clock)
+        # ma hồng
+        pink_ghost = Ghost(pink_ghost_x, pink_ghost_y, ghost_speeds[2], pink_ghost_image, pink_ghost_direction,
+                           pink_ghost_dead)
+        flicker_pink_ghost_clock = pink_ghost.draw(flicker_pink_ghost_clock)
 
-    # ma cam
-    orange_ghost = Ghost(orange_ghost_x, orange_ghost_y, ghost_speeds[3], orange_ghost_image, orange_ghost_direction,
-                         orange_ghost_dead)
-    flicker_orange_ghost_clock = orange_ghost.draw(flicker_orange_ghost_clock)
+        # ma cam
+        orange_ghost = Ghost(orange_ghost_x, orange_ghost_y, ghost_speeds[3], orange_ghost_image, orange_ghost_direction,
+                             orange_ghost_dead)
+        flicker_orange_ghost_clock = orange_ghost.draw(flicker_orange_ghost_clock)
 
-    # score
-    draw_score(data_score_table)
+        # score
+        draw_score(data_score_table)
 
-    # tin nhắn
-    draw_message()
+        # tin nhắn
+        draw_message_box()
 
-    # sự kiện
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            game_running = False
+        # Di chuyển player
+        key_pressed = pygame.key.get_pressed()
+        if not input_text_box_message.active:
+            if key_pressed[pygame.K_w]:
+                player_direction = 2
+                if turns_allowed[2]:
+                    player_y -= speed_player
+            if key_pressed[pygame.K_s]:
+                player_direction = 3
+                if turns_allowed[3]:
+                    player_y += speed_player
+            if key_pressed[pygame.K_a]:
+                player_direction = 1
+                if turns_allowed[1]:
+                    player_x -= speed_player
+            if key_pressed[pygame.K_d]:
+                player_direction = 0
+                if turns_allowed[0]:
+                    player_x += speed_player
 
-    # Di chuyển player
-    key_pressed = pygame.key.get_pressed()
-    if key_pressed[pygame.K_w]:
-        player_direction = 2
-        if turns_allowed[2]:
-            player_y -= speed_player
-    if key_pressed[pygame.K_s]:
-        player_direction = 3
-        if turns_allowed[3]:
-            player_y += speed_player
-    if key_pressed[pygame.K_a]:
-        player_direction = 1
-        if turns_allowed[1]:
-            player_x -= speed_player
-    if key_pressed[pygame.K_d]:
-        player_direction = 0
-        if turns_allowed[0]:
-            player_x += speed_player
-
-    pygame.display.flip()
+        pygame.display.flip()
+    except KeyboardInterrupt:
+        exit()
 pygame.quit()

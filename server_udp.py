@@ -19,6 +19,9 @@ data_clients = {}
 WIDTH_PLAYING = 900
 HEIGHT_PLAYING = 750
 
+# goi han nguoi choi
+limit_player = 6
+
 
 # ramdom food
 def random_to_number(matrix, num_to_replace=10, replace_to=1):
@@ -351,8 +354,9 @@ def handel_score_player():
                 data_score_players[client_data[0]] = client_data[6]
             try:
                 sorted_score_table = dict(sorted(data_score_players.items(), key=lambda item: item[1], reverse=True))
+                first_seven_items = list(sorted_score_table.items())[:7]
                 for client in connected_clients:
-                    server_socket.sendto(json.dumps({"score_table": sorted_score_table}).encode(), client)
+                    server_socket.sendto(json.dumps({"score_table": dict(first_seven_items)}).encode(), client)
             except:
                 pass
 
