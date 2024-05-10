@@ -312,11 +312,39 @@ def check_player_collisions_ghosts(player_location_x, player_location_y):
     return False, eaten_ghosts
 
 
+# ham va cham nguoi choi khac
+def check_player_collisions_other_players(player_location_x, player_location_y, client):
+    global thread_send_data_to_client
+    score_increase = 0
+    for key, value in data_clients.items():
+        if client != key:
+            # if slowing
+            if value[9]:
+                result = check_collision_ghost_or_other_player(player_location_x, player_location_y, value[1], value[2])
+                # and not flicker
+                if result and not value[5]:
+                    value[4] = True
+                    value[6] //= 2
+                    value[9] = False
+                    # random player
+                    x, y = random_empty_position(map_level)
+                    value[1] = x
+                    value[2] = y
+                    # gửi lại dữ liệu cho các client
+                    thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": value},
+                                                                                              eval(key),))
+                    thread_send_data_to_client.start()
+                    score_increase += value[6]
+
+    return score_increase
+
+
 # hàm kiểm tra ăn thức ăn
 def check_eat_food(player_location_x, player_location_y):
     global ghost_is_slow, ghost_slow_speed, ghost_speeds, ghost_slow_time_count
     total_new_score = 0
     eaten_food = False
+    eaten_big_food = False
     # lấy điểm giữa của pacman
     center_player_x = player_location_x + 12
     center_player_y = player_location_y + 13
@@ -332,9 +360,10 @@ def check_eat_food(player_location_x, player_location_y):
         total_new_score += 500
         eaten_food = True
         ghost_is_slow = True
+        eaten_big_food = True
         ghost_speeds = ghost_slow_speed
         ghost_slow_time_count += ghost_slow_time_default
-    return eaten_food, total_new_score
+    return eaten_food, total_new_score, eaten_big_food
 
 
 # tinh diem tang them khi can ma
@@ -349,6 +378,17 @@ def calculate_score_eat_ghosts(eaten_ghosts_arr):
     if eaten_ghosts_arr[3]:
         score_increase += pink_ghost_score
     return score_increase
+
+
+def slow_other_player(client):
+    global thread_send_data_to_client
+    for key, value in data_clients.items():
+        if key != client:
+            value[9] = True
+            thread_send_data_to_client = threading.Thread(target=send_you_data,
+                                                          args=({"you": value}, eval(key),))
+            thread_send_data_to_client.start()
+    print(data_clients)
 
 
 # hàm gửi dữ liệu map, ghost, other player cho các client khác
@@ -460,24 +500,37 @@ while running:
             player_is_dead, eaten_ghosts = check_player_collisions_ghosts(player_x, player_y)
             if player_is_dead:
                 data_json[4] = player_is_dead
+                data_json[6] //= 2
                 # random player
                 player_x, player_y = random_empty_position(map_level)
                 data_json[1] = player_x
                 data_json[2] = player_y
                 # gửi lại dữ liệu cho các client
-                thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+                thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json},
+                                                                                          client_address,))
                 thread_send_data_to_client.start()
+            # check eat ghost
             score_increase = calculate_score_eat_ghosts(eaten_ghosts)
             if score_increase > 0:
                 data_json[6] += score_increase
                 thread_send_data_to_client = threading.Thread(target=send_you_data,
                                                               args=({"you": data_json}, client_address,))
                 thread_send_data_to_client.start()
+        # check va cham voi nguoi choi khac
+        score_increase = check_player_collisions_other_players(player_x, player_y, str(client_address))
+        if score_increase > 0:
+            data_json[6] += score_increase
+            thread_send_data_to_client = threading.Thread(target=send_you_data,
+                                                          args=({"you": data_json}, client_address,))
+            thread_send_data_to_client.start()
         # check eat food
-        is_eaten, score = check_eat_food(player_x, player_y)
+        is_eaten, score, eat_big = check_eat_food(player_x, player_y)
         if is_eaten:
+            if eat_big:
+                slow_other_player(str(client_address))
             data_json[6] += score
-            thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+            thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json},
+                                                                                      client_address,))
             thread_send_data_to_client.start()
         # thêm dữ liệu vào gói
         data_clients.update({str(client_address): data_json})

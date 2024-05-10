@@ -1,6 +1,7 @@
 import copy
 from map import map_level_1
 import pygame
+import sys
 import random
 import socket
 import threading
@@ -9,28 +10,8 @@ from message_box import MessageBox
 from input_box import InputBox
 from datetime import datetime
 
-
-# tìm vị trí trống trong matrix map
-def random_empty_position_in_map(matrix):
-    empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
-    if empty_positions:
-        return random.choice(empty_positions)
-    else:
-        return None
-
-
-# random và tính toán vị trí trống
-def random_empty_position(matrix):
-    y, x = random_empty_position_in_map(matrix)
-    return x * 25, y * 25
-
-
-# Tạo socket client
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address = ('localhost', 12345)
-
-# nickname
-nick_name = "NguyenVanTeo"
+# init pygame
+pygame.init()
 
 # khai báo ip và port cho server chat
 host_server_chat = '127.0.0.1'
@@ -39,8 +20,6 @@ port_server_chat = 55555
 client_message = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_message.connect((host_server_chat, port_server_chat))
 
-# init pygame
-pygame.init()
 
 # đặt kích thước các màn hình
 WIDTH_PLAYING = 900
@@ -64,9 +43,6 @@ pygame.display.set_caption("Pacman")
 icon = pygame.image.load("images/pacman/1.png")
 pygame.display.set_icon(icon)
 
-# thông tin map
-map_level = copy.deepcopy(map_level_1)
-
 # thông tin fps
 timer = pygame.time.Clock()
 fps = 60
@@ -75,6 +51,123 @@ fps = 60
 font_regular_path = "font/Roboto/Roboto-Regular.ttf"
 font_bold_part = "font/Roboto/Roboto-Bold.ttf"
 
+# tải ảnh pacman
+player_images = []
+for i in range(1, 5):
+    player_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/{i}.png"), (240, 240)))
+
+
+# tìm vị trí trống trong matrix map
+def random_empty_position_in_map(matrix):
+    empty_positions = [(y, x) for y in range(len(matrix) - 1) for x in range(len(matrix[0]) - 1) if matrix[y][x] == 0]
+    if empty_positions:
+        return random.choice(empty_positions)
+    else:
+        return None
+
+
+# random và tính toán vị trí trống
+def random_empty_position(matrix):
+    y, x = random_empty_position_in_map(matrix)
+    return x * 25, y * 25
+
+
+class Button:
+
+    def __init__(self, text, font, width, height, pos):
+        self.pressed = False
+        self.font = font
+
+        self.rect = pygame.Rect(pos, (width, height))
+        self.color = '#B97A57'
+
+        self.text = text
+        self.text_surf = self.font.render(text, True, '#000000')
+        self.text_rect = self.text_surf.get_rect(center=self.rect.center)
+
+    def draw(self, border_radius, screen):
+        pygame.draw.rect(screen, self.color, self.rect, border_radius = border_radius)
+        screen.blit(self.text_surf, self.text_rect)
+        self.check_click()
+
+    def check_click(self):
+        mouse_pos = pygame.mouse.get_pos()
+        if self.rect.collidepoint(mouse_pos):
+            self.color = '#C99B53'
+            if pygame.mouse.get_pressed()[0]:
+                self.pressed = True
+        else:
+            self.color = '#B97A57'
+            self.pressed = False
+
+
+limit_length_name_player = 9
+input_name = InputBox(540, 500, 200, "Player", 1, limit_length_name_player, pygame.font.SysFont('calibri', 35), "black", "red", "blue", 5, False)
+font_title = pygame.font.SysFont('broadway', 100)
+surf_title = font_title.render('PACMAN', True, (0, 0, 0))
+rect_title = surf_title.get_rect()
+rect_title.midtop = (640, 100)
+font_text_field_enter_name = pygame.font.SysFont('calibri', 25, True)
+text_field_enter_name = font_text_field_enter_name.render('Enter your name!', True, (0, 0, 0))
+button_start = Button('Start', pygame.font.Font(None, 30), 300, 50, (490, 530))
+button_exit = Button('Exit', pygame.font.Font(None, 30), 300, 40, (490, 600))
+
+game_home_running = True
+loop_count_player = 0
+
+# nickname
+nick_name = "Player"
+
+
+def handle_enter_input_name(name):
+    global game_home_running, nick_name
+    nick_name = name
+    game_home_running = False
+
+
+# game home
+while game_home_running:
+    timer.tick(fps)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.display.quit()
+            pygame.quit()
+            sys.exit()
+        if len(input_name.text) < limit_length_name_player + 1:
+            input_name.handle_event(event, handle_enter_input_name)
+
+    # cơ hàm pacman
+    if loop_count_player < 19:
+        loop_count_player += 1
+    else:
+        loop_count_player = 0
+
+    screen.fill((255, 255, 255))
+    screen.blit(surf_title, rect_title)
+    screen.blit(player_images[loop_count_player // 5], (520, 200))
+    screen.blit(text_field_enter_name, (550, 440))
+    input_name.draw(screen)
+    button_start.draw(10, screen)
+    button_exit.draw(10, screen)
+
+    if button_start.pressed:
+        handle_enter_input_name(input_name.text)
+    if button_exit.pressed:
+        sys.exit()
+    pygame.display.flip()
+
+
+# Tạo socket client
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_address = ('localhost', 12345)
+
+
+game_running = True
+
+# thông tin map
+map_level = copy.deepcopy(map_level_1)
+
 # màu nền
 background_color = (45, 45, 45)
 
@@ -82,6 +175,10 @@ background_color = (45, 45, 45)
 player_images = []
 for i in range(1, 5):
     player_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/{i}.png"), (25, 25)))
+
+player_slowing_images = []
+for i in range(1, 5):
+    player_slowing_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/slowing_{i}.png"), (25, 25)))
 
 # tải hình ảnh mấy con ma
 blue_ghost_image = pygame.transform.scale(pygame.image.load("images/ghost/blue.png"), (25, 25))
@@ -164,6 +261,7 @@ loop_count_player = 0
 speed_player = 2
 turns_allowed = [False, False, False, False]  # Right, Left, Up, Down
 player_dead = True
+player_slowing = False
 total_score = 0
 is_flickering_player = False
 is_visible_player = False
@@ -171,6 +269,8 @@ count_flicker_player = 0
 player_flicker_time_default = 200
 player_flicker_time_count = player_flicker_time_default
 font_name_player = pygame.font.Font(font_regular_path, 12)
+player_slowing_clock_default = 400
+player_slowing_clock = player_slowing_clock_default
 
 # thoong tin cacs nguoi choi khac
 other_player_data = []
@@ -185,9 +285,9 @@ message_box_frame_center_color = (181, 230, 29)
 font_text_input_message = pygame.font.Font(font_regular_path, 15)
 limit_text_length_message = 40
 text_message_color = (112, 74, 53)
-input_text_box_message = InputBox(WIDTH_PLAYING + 25, HEIGHT_PLAYING - 50, 250, "", limit_text_length_message,
+input_text_box_message = InputBox(WIDTH_PLAYING + 25, HEIGHT_PLAYING - 50, 250, "", 2,limit_text_length_message,
                                   font_text_input_message, text_message_color, message_box_frame_color,
-                                  message_box_frame_center_color, 10)
+                                  message_box_frame_center_color, 10, True)
 background_message_box = (176, 176, 176)
 message_box = MessageBox(WIDTH_PLAYING + 25, HEIGHT_SCORE_TABLE + 25, WIDTH_BOX_CHAT - 50, HEIGHT_BOX_CHAT - 120,
                          background_message_box, text_message_color, font_text_input_message, 10, screen)
@@ -200,8 +300,9 @@ def receive_data():
         blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction, orange_ghost_dead, \
         orange_dead_time_count, orange_dead_time_default, pink_ghost_x, pink_ghost_y, pink_ghost_direction, \
         pink_ghost_dead, pink_dead_time_count, pink_dead_time_default, ghost_speeds, map_level, player_dead, \
-        player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table
-    while True:
+        player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table, player_slowing, \
+        player_slowing_clock
+    while game_running:
         try:
             # Nhận phản hồi từ server
             response, server_address = client_socket.recvfrom(4096)
@@ -251,6 +352,13 @@ def receive_data():
                     player_dead = True
                     player_x = data_you[1]
                     player_y = data_you[2]
+                if data_you[9]:
+                    if player_slowing:
+                        player_slowing_clock += player_slowing_clock_default
+                    else:
+                        player_slowing = True
+                else:
+                    player_slowing = False
 
             data_other_player = data.get("otherPlayer")
             if data_other_player is not None:
@@ -265,8 +373,8 @@ def receive_data():
 
 
 # chạy luồng riêng để nhận dữ liệu
-receive_thread = threading.Thread(target=receive_data)
-receive_thread.start()
+receive_data_thread = threading.Thread(target=receive_data)
+receive_data_thread.start()
 
 # thông tin vị trí player
 player_x, player_y = random_empty_position(map_level)
@@ -295,22 +403,36 @@ def draw_map():
 
 
 # hàm vẽ player lên màn hình
-def draw_player(visible_player, loop_player_clock, player_location_x, player_location_y, direction, name):
+def draw_player(visible_player, loop_player_clock, player_location_x, player_location_y, direction, name, player_is_slow):
     if visible_player:
         name_player = font_name_player.render(name, True, (255, 255, 255), None)
         screen.blit(name_player, name_player.get_rect(center=(player_location_x + 13, player_location_y - 13)))
-        # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
-        if direction == 0:
-            screen.blit(player_images[loop_player_clock // 5], (player_location_x, player_location_y))
-        elif direction == 1:
-            screen.blit(pygame.transform.flip(
-                player_images[loop_player_clock // 5], True, False), (player_location_x, player_location_y))
-        elif direction == 2:
-            screen.blit(pygame.transform.rotate(
-                player_images[loop_player_clock // 5], 90), (player_location_x, player_location_y))
-        elif direction == 3:
-            screen.blit(pygame.transform.rotate(
-                player_images[loop_player_clock // 5], 270), (player_location_x, player_location_y))
+        if player_is_slow:
+            # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
+            if direction == 0:
+                screen.blit(player_slowing_images[loop_player_clock // 5], (player_location_x, player_location_y))
+            elif direction == 1:
+                screen.blit(pygame.transform.flip(
+                    player_slowing_images[loop_player_clock // 5], True, False), (player_location_x, player_location_y))
+            elif direction == 2:
+                screen.blit(pygame.transform.rotate(
+                    player_slowing_images[loop_player_clock // 5], 90), (player_location_x, player_location_y))
+            elif direction == 3:
+                screen.blit(pygame.transform.rotate(
+                    player_slowing_images[loop_player_clock // 5], 270), (player_location_x, player_location_y))
+        else:
+            # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
+            if direction == 0:
+                screen.blit(player_images[loop_player_clock // 5], (player_location_x, player_location_y))
+            elif direction == 1:
+                screen.blit(pygame.transform.flip(
+                    player_images[loop_player_clock // 5], True, False), (player_location_x, player_location_y))
+            elif direction == 2:
+                screen.blit(pygame.transform.rotate(
+                    player_images[loop_player_clock // 5], 90), (player_location_x, player_location_y))
+            elif direction == 3:
+                screen.blit(pygame.transform.rotate(
+                    player_images[loop_player_clock // 5], 270), (player_location_x, player_location_y))
 
 
 # hàm vẽ các player khác
@@ -318,7 +440,7 @@ def draw_other_player():
     if len(other_player_data) > 0:
         for other_player in other_player_data:
             draw_player(other_player[7], other_player[8], other_player[1], other_player[2], other_player[3],
-                        other_player[0])
+                        other_player[0], other_player[9])
 
 
 # hàm kiểm tra đụng tường
@@ -409,7 +531,7 @@ def send_data():
     player_dead_default = False
     json_data = json.dumps(
         [nick_name, player_x, player_y, player_direction, player_dead_default, is_flickering_player, total_score,
-         is_visible_player, loop_count_player
+         is_visible_player, loop_count_player, player_slowing
          ]
     )
     # gửi dữ liệu lên server
@@ -424,19 +546,22 @@ def send_message(message):
 
 # hàm nhận thông tin chat tu server
 def receive_message():
-    while True:
-        # nhận dữ liệu từ server
-        data = client_message.recv(1024).decode()
-        if data == "NICKNAME":
-            client_message.send(json.dumps(["", nick_name, "Join the room!"]).encode())
-        else:
-            json_data = json.loads(data)
-            message_box.add_message(json_data)
+    while game_running:
+        try:
+            # nhận dữ liệu từ server
+            data = client_message.recv(1024).decode()
+            if data == "NICKNAME":
+                client_message.send(json.dumps(["", nick_name, "Join the room!"]).encode())
+            else:
+                json_data = json.loads(data)
+                message_box.add_message(json_data)
+        except:
+            pass
 
 
 # tạo thread nhận dữ liệu chat
-receive_thread = threading.Thread(target=receive_message)
-receive_thread.start()
+receive_thread_message = threading.Thread(target=receive_message)
+receive_thread_message.start()
 
 
 # ham xu ly khi nhan enter box chat
@@ -452,8 +577,18 @@ def handle_enter_input_box_message(text):
     write_thread.start()
 
 
+# Hàm để đóng chương=
+def close_game():
+    global game_running
+    game_running = False
+    receive_data_thread.join()
+    client_message.close()
+    receive_thread_message.join()
+    pygame.quit()
+    sys.exit()
+
+
 # game main
-game_running = True
 while game_running:
     try:
         # đặt fps
@@ -488,6 +623,13 @@ while game_running:
             player_dead = False
             is_visible_player = True
             player_flicker_time_count = player_flicker_time_default
+
+        # thoi gian player slowing
+        if player_slowing and player_slowing_clock > 0:
+            player_slowing_clock -= 1
+        else:
+            player_slowing = False
+            player_slowing_clock = player_slowing_clock_default
 
         # gửi dữ liệu người chơi lên server
         send_data()
@@ -529,7 +671,8 @@ while game_running:
         draw_map()
 
         # pacman
-        draw_player(is_visible_player, loop_count_player, player_x, player_y, player_direction, nick_name)
+        draw_player(is_visible_player, loop_count_player, player_x, player_y, player_direction, nick_name,
+                    player_slowing)
 
         draw_other_player()
 
@@ -580,5 +723,5 @@ while game_running:
 
         pygame.display.flip()
     except KeyboardInterrupt:
-        exit()
-pygame.quit()
+        close_game()
+close_game()

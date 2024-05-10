@@ -175,7 +175,10 @@ background_color = (45, 45, 45)
 player_images = []
 for i in range(1, 5):
     player_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/{i}.png"), (25, 25)))
-player_slowing_image = pygame.transform.scale(pygame.image.load(f"images/pacman/slowing.png"), (25, 25))
+
+player_slowing_images = []
+for i in range(1, 5):
+    player_slowing_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/slowing_{i}.png"), (25, 25)))
 
 # tải hình ảnh mấy con ma
 blue_ghost_image = pygame.transform.scale(pygame.image.load("images/ghost/blue.png"), (25, 25))
@@ -266,6 +269,8 @@ count_flicker_player = 0
 player_flicker_time_default = 200
 player_flicker_time_count = player_flicker_time_default
 font_name_player = pygame.font.Font(font_regular_path, 12)
+player_slowing_clock_default = 400
+player_slowing_clock = player_slowing_clock_default
 
 # thoong tin cacs nguoi choi khac
 other_player_data = []
@@ -295,7 +300,8 @@ def receive_data():
         blue_dead_time_default, orange_ghost_x, orange_ghost_y, orange_ghost_direction, orange_ghost_dead, \
         orange_dead_time_count, orange_dead_time_default, pink_ghost_x, pink_ghost_y, pink_ghost_direction, \
         pink_ghost_dead, pink_dead_time_count, pink_dead_time_default, ghost_speeds, map_level, player_dead, \
-        player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table
+        player_x, player_y, ghost_is_slow, other_player_data, total_score, data_score_table, player_slowing, \
+        player_slowing_clock
     while game_running:
         try:
             # Nhận phản hồi từ server
@@ -346,6 +352,13 @@ def receive_data():
                     player_dead = True
                     player_x = data_you[1]
                     player_y = data_you[2]
+                if data_you[9]:
+                    if player_slowing:
+                        player_slowing_clock += player_slowing_clock_default
+                    else:
+                        player_slowing = True
+                else:
+                    player_slowing = False
 
             data_other_player = data.get("otherPlayer")
             if data_other_player is not None:
@@ -395,7 +408,18 @@ def draw_player(visible_player, loop_player_clock, player_location_x, player_loc
         name_player = font_name_player.render(name, True, (255, 255, 255), None)
         screen.blit(name_player, name_player.get_rect(center=(player_location_x + 13, player_location_y - 13)))
         if player_is_slow:
-            screen.blit(player_slowing_image, (player_location_x, player_location_y))
+            # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
+            if direction == 0:
+                screen.blit(player_slowing_images[loop_player_clock // 5], (player_location_x, player_location_y))
+            elif direction == 1:
+                screen.blit(pygame.transform.flip(
+                    player_slowing_images[loop_player_clock // 5], True, False), (player_location_x, player_location_y))
+            elif direction == 2:
+                screen.blit(pygame.transform.rotate(
+                    player_slowing_images[loop_player_clock // 5], 90), (player_location_x, player_location_y))
+            elif direction == 3:
+                screen.blit(pygame.transform.rotate(
+                    player_slowing_images[loop_player_clock // 5], 270), (player_location_x, player_location_y))
         else:
             # 0-RIGHT, 1-LEFT, 2-UP, 3-DOWN
             if direction == 0:
@@ -416,7 +440,7 @@ def draw_other_player():
     if len(other_player_data) > 0:
         for other_player in other_player_data:
             draw_player(other_player[7], other_player[8], other_player[1], other_player[2], other_player[3],
-                        other_player[0], False)
+                        other_player[0], other_player[9])
 
 
 # hàm kiểm tra đụng tường
@@ -507,7 +531,7 @@ def send_data():
     player_dead_default = False
     json_data = json.dumps(
         [nick_name, player_x, player_y, player_direction, player_dead_default, is_flickering_player, total_score,
-         is_visible_player, loop_count_player
+         is_visible_player, loop_count_player, player_slowing
          ]
     )
     # gửi dữ liệu lên server
@@ -599,6 +623,13 @@ while game_running:
             player_dead = False
             is_visible_player = True
             player_flicker_time_count = player_flicker_time_default
+
+        # thoi gian player slowing
+        if player_slowing and player_slowing_clock > 0:
+            player_slowing_clock -= 1
+        else:
+            player_slowing = False
+            player_slowing_clock = player_slowing_clock_default
 
         # gửi dữ liệu người chơi lên server
         send_data()
