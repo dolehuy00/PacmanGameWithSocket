@@ -1,5 +1,5 @@
 # Pacman Game with Socket
-
+![ManHinhChinh](img_page/manHinhChoi.png)
 ## Giới thiệu
 
 Đây là dự án tạo trò chơi Pacman sử dụng kết nối socket để cho phép nhiều người chơi cùng tham gia trò chơi. Trò chơi sẽ được viết bằng Python.
@@ -54,9 +54,53 @@ python3 -m pygame.examples.aliens
 Nếu Pygame đã được cài đặt đúng cách, bạn sẽ thấy một cửa sổ mới mở ra hiển thị một trò chơi mẫu.
 
 
+## Tải mã nguồn từ github
+
+```bash
+git clone https://github.com/dolehuy00/PacmanGameWithSocket.git
+```
+
+# Khởi động Trò Chơi
+## Chạy server
+
+```bash
+python server_data_udp.py
+python server_chat_tcp.py
+python client_1.py
+```
+
+##  Chạy client
+
+```bash
+ python client_1.py
+```
+
+# Chơi Trò Chơi
+
+Sau khi trò chơi khởi động, màn hình chờ sẽ được hiển thị, tại đây bạn có thể nhập tên của mình trước khi vào phòng. Sau đó bạn có thể nhấn enter hoặc nút "Start" để bắt đầu vào phòng chơi.
+
+Trong quá trình chơi trò chơi Pacman, có một số tình huống xảy ra như sau:
+
+1. **Pacman Ăn Một Viên Gạch:** Khi Pacman đi qua một viên gạch, viên gạch sẽ biến mất và người chơi sẽ nhận được điểm số tương ứng.
+
+2. **Pacman Tiếp Xúc Với Ma:** Nếu Pacman tiếp xúc với một con ma, có thể xảy ra:
+   - Nếu ma đang ở trạng thái làm chậm (sau khi bạn ăn được viên gạch lớn), Pacman sẽ ăn được ma và ma sẽ được đưa về chuồng giữa bản đồ, bạn sẽ được cộng điểm.
+   - Nếu ma không ở trạng thái làm chậm, Pacman sẽ bị mất mạng và được dịch chuyển đến vị trí ngẫu nhiên, đồng thời mất nửa số điểm hiện có.
+
+3. **Pacman Tiếp Xúc Với Người Chơi Khác:** Nếu Pacman tiếp xúc với một người chơi khác, có thể xảy ra:
+   - Nếu người chơi khác đang đang ở trạng thái suy yếu (có màu xanh) (sau khi bạn ăn được viên gạch lớn), bạn sẽ tiêu diệt được người chơi khác, họ sẽ bị đưa đi vị trí ngẫu nhiên, bạn sẽ cướp được nửa số điểm của họ.
+   - Nếu người chơi khác không ở trạng thái suy yếu hoặc cả 2 đểu bị suy yếu, thì không có việc gì xảy ra cả.
+
+4. **Pacman Ăn Viên Gạch Năng Lượng (Thức Ăn Lớn):** Khi Pacman ăn một viên gạch năng lượng, nó sẽ trở thành "siêu phẩm" trong một khoảng thời gian ngắn, có khả năng ăn được các con ma mà không bị tấn công và làm suy yếu các người chơi khác.
+
+5. **Ăn Hết Các Viên Gạch:** Nếu Pacman ăn hết tất cả các viên gạch trên màn hình, trong khoảng 30 giây tiếp theo trò chơi sẽ tự động sinh ra các viên gạch mới và người chơi có thể đoạt được các viên gạch lớn để tối ưu số điểm của mình.
+
+### Màn hình chờ của trò chơi
+![ManHinhCho](img_page/manHinhCho.png)
 
 
-
+### Màn hình chính của trò chơi
+![ManHinhCho](img_page/manHinhChoi.png)
 
 
 
