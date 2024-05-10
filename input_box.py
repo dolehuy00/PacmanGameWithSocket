@@ -4,9 +4,9 @@ import pygame
 
 # class o nhap lieu
 class InputBox:
-    def __init__(self, x, y, w, text, limit_text, font, text_color, color_inactive, color_active, border_radius):
+    def __init__(self, x, y, w, text, line_count, limit_text, font, text_color, color_inactive, color_active, border_radius, space_key):
         self.y = y
-        self.rect = pygame.Rect(x, y, w, font.get_height() * 2 + 10)
+        self.rect = pygame.Rect(x, y, w, font.get_height() * line_count + 10)
         self.color = color_inactive
         self.text = text
         self.txt_surface = font.render(text, True, text_color)
@@ -18,6 +18,7 @@ class InputBox:
         self.defaultBorderColor = color_inactive
         self.limit_text = limit_text
         self.rect.y = self.y - self.font.get_height()
+        self.space_key = space_key
 
     def handle_event(self, event, event_enter_callback):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -34,7 +35,7 @@ class InputBox:
                 elif event.key == pygame.K_BACKSPACE:
                     self.text = self.text[:-1]
                 else:
-                    if not len(self.text) == self.limit_text:
+                    if not len(self.text) == self.limit_text and (self.space_key or not event.unicode == ' '):
                         self.text += event.unicode
                 self.txt_surface = self.font.render(self.text, True, self.text_color)
 

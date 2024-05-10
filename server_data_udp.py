@@ -1,10 +1,15 @@
 import socket
 import json
+import sys
+
 import pygame
 import threading
 from map import map_level_1
 import copy
 import random
+
+
+running = True
 
 # Tạo socket server
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -82,27 +87,32 @@ red_ghost_direction = 0
 red_ghost_dead = False
 red_dead_time_count = 0
 red_dead_time_default = 400
+red_ghost_score = 2000
 
 blue_ghost_x, blue_ghost_y = random_empty_position(map_level)
 blue_ghost_direction = 1
 blue_ghost_dead = False
 blue_dead_time_count = 0
 blue_dead_time_default = 400
+blue_ghost_score = 1000
 
 orange_ghost_x, orange_ghost_y = random_empty_position(map_level)
 orange_ghost_direction = 2
 orange_ghost_dead = False
 orange_dead_time_count = 0
 orange_dead_time_default = 400
+orange_ghost_score = 1000
 
 pink_ghost_x, pink_ghost_y = random_empty_position(map_level)
 pink_ghost_direction = 3
 pink_ghost_dead = False
 pink_dead_time_count = 0
 pink_dead_time_default = 400
+pink_ghost_score = 1000
 
 ghost_speeds_default = [3, 2, 2, 2]
 ghost_speeds = ghost_speeds_default
+ghost_slow_speed = [2, 1, 1, 1]
 
 
 # lớp ma
@@ -169,7 +179,7 @@ class Ghost:
 
 
 # hàm kiểm tra va chạm với 1 ma
-def check_collision_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
+def check_collision_ghost_or_other_player(player_location_x, player_location_y, ghost_x, ghost_y):
     if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
             or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
             or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
@@ -186,7 +196,7 @@ def run_ghost():
         red_ghost_dead, red_dead_time_count, blue_ghost_dead, blue_dead_time_count, pink_ghost_dead, \
         pink_dead_time_count, orange_ghost_dead, orange_dead_time_count, ghost_is_slow, ghost_slow_time_count, \
         ghost_speeds
-    while True:
+    while running:
         clock.tick(fps)
 
         # thời gian ma hẹo
@@ -260,48 +270,51 @@ def check_player_collisions_ghosts(player_location_x, player_location_y):
     global red_ghost_x, red_ghost_y, blue_ghost_x, blue_ghost_y, pink_ghost_x, pink_ghost_y, orange_ghost_x,\
         orange_ghost_y, red_ghost_dead, blue_ghost_dead, pink_ghost_dead, orange_ghost_dead
     player_dead = True
+    eaten_ghosts = [False, False, False, False]  # red, blue, orange, pink
     # va chạm với ma
-    collisions_red = check_collision_ghost(player_location_x, player_location_y, red_ghost_x, red_ghost_y)
+    collisions_red = check_collision_ghost_or_other_player(player_location_x, player_location_y, red_ghost_x, red_ghost_y)
     if collisions_red:
         if ghost_is_slow and not red_ghost_dead:
             red_ghost_y = len(map_level) // 2 * 25
             red_ghost_x = len(map_level[0]) // 2 * 25
             red_ghost_dead = True
+            eaten_ghosts[0] = True
         else:
-            return player_dead
-    collisions_blue = check_collision_ghost(player_location_x, player_location_y, blue_ghost_x, blue_ghost_y)
+            return player_dead, eaten_ghosts
+    collisions_blue = check_collision_ghost_or_other_player(player_location_x, player_location_y, blue_ghost_x, blue_ghost_y)
     if collisions_blue:
         if ghost_is_slow and not blue_ghost_dead:
             blue_ghost_y = (len(map_level) - 1) // 2 * 25
             blue_ghost_x = len(map_level[0]) // 2 * 25
             blue_ghost_dead = True
+            eaten_ghosts[1] = True
         else:
-            return player_dead
-    collisions_pink = check_collision_ghost(player_location_x, player_location_y, pink_ghost_x, pink_ghost_y)
+            return player_dead, eaten_ghosts
+    collisions_pink = check_collision_ghost_or_other_player(player_location_x, player_location_y, pink_ghost_x, pink_ghost_y)
     if collisions_pink:
         if ghost_is_slow and not pink_ghost_dead:
             pink_ghost_y = (len(map_level) - 2) // 2 * 25
             pink_ghost_x = (len(map_level[0]) - 1) // 2 * 25
             pink_ghost_dead = True
+            eaten_ghosts[3] = True
         else:
-            return player_dead
-    collisions_orange = check_collision_ghost(player_location_x, player_location_y, orange_ghost_x, orange_ghost_y)
+            return player_dead, eaten_ghosts
+    collisions_orange = check_collision_ghost_or_other_player(player_location_x, player_location_y, orange_ghost_x, orange_ghost_y)
     if collisions_orange:
         if ghost_is_slow and not orange_ghost_dead:
             orange_ghost_y = len(map_level) // 2 * 25
             orange_ghost_x = (len(map_level[0]) - 1) // 2 * 25
             orange_ghost_dead = True
+            eaten_ghosts[2] = True
         else:
-            return player_dead
+            return player_dead, eaten_ghosts
 
-    return False
+    return False, eaten_ghosts
 
 
 # hàm kiểm tra ăn thức ăn
 def check_eat_food(player_location_x, player_location_y):
-    global ghost_is_slow
-    global ghost_speeds
-    global ghost_slow_time_count
+    global ghost_is_slow, ghost_slow_speed, ghost_speeds, ghost_slow_time_count
     total_new_score = 0
     eaten_food = False
     # lấy điểm giữa của pacman
@@ -319,9 +332,23 @@ def check_eat_food(player_location_x, player_location_y):
         total_new_score += 500
         eaten_food = True
         ghost_is_slow = True
-        ghost_speeds = [1, 1, 1, 1]
+        ghost_speeds = ghost_slow_speed
         ghost_slow_time_count += ghost_slow_time_default
     return eaten_food, total_new_score
+
+
+# tinh diem tang them khi can ma
+def calculate_score_eat_ghosts(eaten_ghosts_arr):
+    score_increase = 0
+    if eaten_ghosts_arr[0]:
+        score_increase += red_ghost_score
+    if eaten_ghosts_arr[1]:
+        score_increase += blue_ghost_score
+    if eaten_ghosts_arr[2]:
+        score_increase += orange_ghost_score
+    if eaten_ghosts_arr[3]:
+        score_increase += pink_ghost_score
+    return score_increase
 
 
 # hàm gửi dữ liệu map, ghost, other player cho các client khác
@@ -346,7 +373,7 @@ def send_you_data(data_send, client):
 
 
 def handel_score_player():
-    while True:
+    while running:
         pygame.time.Clock().tick(2)
         if len(data_clients) > 0:
             data_score_players = {}
@@ -361,16 +388,62 @@ def handel_score_player():
                 pass
 
 
+def close():
+    global running
+    running = False
+    pygame.quit()
+    run_ghost_thread.join()
+    send_data_score_to_all_client_thread.join()
+    thread_random_food.join()
+    server_socket.close()
+    sys.exit()
+
+
+def stop_server():
+    try:
+        i = input("Enter 'exit' to close: \n")
+        if i == "exit":
+            close()
+    except:
+        close()
+
+
+# ham dem xem trong ma tran co bao nhieu so tuong ung
+def count_numbers(matrix, number):
+    return sum(1 for row in matrix for element in row if element == number)
+
+
+# ham tu dong sinh thuc an
+def auto_produce_food():
+    while running:
+        pygame.time.delay(30000)
+        global map_level
+        if count_numbers(map_level, 1) < 50:
+            # số lượng thức ăn nhỏ
+            map_level = random_to_number(map_level, 30)
+        if count_numbers(map_level, 2) < 3:
+            # số lượng thức ăn lớn
+            map_level = random_to_number(map_level, 2, 2)
+
+
 # chạy luồng cho ma di chuyển
 run_ghost_thread = threading.Thread(target=run_ghost)
 run_ghost_thread.start()
 
-# luoofng guwwi bang xep hangj
-thread_send_data_to_all_client = threading.Thread(target=handel_score_player)
-thread_send_data_to_all_client.start()
+# luong gui bang xep hang
+send_data_score_to_all_client_thread = threading.Thread(target=handel_score_player)
+send_data_score_to_all_client_thread.start()
+
+# luong cho lenh dung server
+thread_exit = threading.Thread(target=stop_server)
+thread_exit.start()
+
+# luong randon food
+thread_random_food = threading.Thread(target=auto_produce_food)
+thread_random_food.start()
 
 # nhận request từ client
-while True:
+while running:
     try:
         # Nhận dữ liệu từ client
         data, client_address = server_socket.recvfrom(4096)
@@ -378,12 +451,13 @@ while True:
         # xử lý dữ liệu nhận được
         connected_clients.add(client_address)
         data_json = json.loads(data.decode())
+
         player_x = data_json[1]
         player_y = data_json[2]
         # check flicker
         if not data_json[5]:
             # check player dead
-            player_is_dead = check_player_collisions_ghosts(player_x, player_y)
+            player_is_dead, eaten_ghosts = check_player_collisions_ghosts(player_x, player_y)
             if player_is_dead:
                 data_json[4] = player_is_dead
                 # random player
@@ -392,6 +466,12 @@ while True:
                 data_json[2] = player_y
                 # gửi lại dữ liệu cho các client
                 thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json}, client_address,))
+                thread_send_data_to_client.start()
+            score_increase = calculate_score_eat_ghosts(eaten_ghosts)
+            if score_increase > 0:
+                data_json[6] += score_increase
+                thread_send_data_to_client = threading.Thread(target=send_you_data,
+                                                              args=({"you": data_json}, client_address,))
                 thread_send_data_to_client.start()
         # check eat food
         is_eaten, score = check_eat_food(player_x, player_y)
@@ -411,4 +491,5 @@ while True:
         connected_clients.clear()
         data_clients.clear()
         print("Client", client_address, "đã ngắt kết nối.")
-        print(e)
+    except OSError:
+        close()
