@@ -6,9 +6,10 @@ import random
 import socket
 import threading
 import json
-from message_box import MessageBox
-from input_box import InputBox
+from lib_component.message_box import MessageBox
+from lib_component.input_box import InputBox
 from datetime import datetime
+from lib_component.button import Button
 
 # init pygame
 pygame.init()
@@ -70,35 +71,6 @@ def random_empty_position_in_map(matrix):
 def random_empty_position(matrix):
     y, x = random_empty_position_in_map(matrix)
     return x * 25, y * 25
-
-
-class Button:
-
-    def __init__(self, text, font, width, height, pos):
-        self.pressed = False
-        self.font = font
-
-        self.rect = pygame.Rect(pos, (width, height))
-        self.color = '#B97A57'
-
-        self.text = text
-        self.text_surf = self.font.render(text, True, '#000000')
-        self.text_rect = self.text_surf.get_rect(center=self.rect.center)
-
-    def draw(self, border_radius, screen):
-        pygame.draw.rect(screen, self.color, self.rect, border_radius = border_radius)
-        screen.blit(self.text_surf, self.text_rect)
-        self.check_click()
-
-    def check_click(self):
-        mouse_pos = pygame.mouse.get_pos()
-        if self.rect.collidepoint(mouse_pos):
-            self.color = '#C99B53'
-            if pygame.mouse.get_pressed()[0]:
-                self.pressed = True
-        else:
-            self.color = '#B97A57'
-            self.pressed = False
 
 
 limit_length_name_player = 9
@@ -446,13 +418,17 @@ def draw_other_player():
 # hàm kiểm tra đụng tường
 def check_position(location_x, location_y):
     turns = [False, False, False, False]  # Right, Left, Up, Down
-    if map_level[location_y // 25][(location_x - speed_player) // 25] < 3:
+    if map_level[location_y // 25][(location_x - speed_player) // 25] < 3 \
+            and map_level[(location_y + 25 - speed_player) // 25][(location_x - speed_player) // 25] < 3:
         turns[1] = True
-    if map_level[location_y // 25][(location_x + speed_player + 23) // 25] < 3:
+    if map_level[location_y // 25][(location_x + 25 + speed_player) // 25] < 3 \
+            and map_level[(location_y + 25 - speed_player) // 25][(location_x + 25 + speed_player) // 25] < 3:
         turns[0] = True
-    if map_level[(location_y + speed_player + 23) // 25][location_x // 25] < 3:
+    if map_level[(location_y + 25 + speed_player) // 25][location_x // 25] < 3 \
+            and map_level[(location_y + 25 + speed_player) // 25][(location_x + 25 - speed_player) // 25] < 3:
         turns[3] = True
-    if map_level[(location_y - speed_player) // 25][location_x // 25] < 3:
+    if map_level[(location_y - speed_player) // 25][location_x // 25] < 3 \
+            and map_level[location_y // 25][(location_x + 25 - speed_player) // 25] < 3:
         turns[2] = True
 
     return turns

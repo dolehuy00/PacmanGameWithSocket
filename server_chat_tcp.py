@@ -20,18 +20,22 @@ running = True
 
 
 def stop_server():
-    try:
-        i = input("Enter 'exit' to close: \n")
-        if i == "exit":
+    while True:
+        try:
+            i = input("Enter 'exit' to close: \n")
+            if i == "exit":
+                raise
+        except:
             close()
-    except:
-        close()
+            break
 
 
 def close():
     global running
     running = False
+    print("--> Stopped running main.")
     server.close()
+    print("--> Stopped socket.")
     sys.exit()
 
 

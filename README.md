@@ -101,7 +101,24 @@ Trong quá trình chơi trò chơi Pacman, có một số tình huống xảy ra
 
 
 ### Màn hình chính của trò chơi
-![ManHinhCho](img_page/manHinhChoi.png)
+![ManHinhChinh](img_page/manHinhChoi.png)
 
 
+### Khi tham gia nhiều người
+![ManHinhCho](img_page/manHinhTroChoi.png)
 
+
+### Khi người chơi bị suy yếu
+![ManHinhCho](img_page/otherPlayerWeaken.png)
+
+### Khung điểm số
+![ManHinhCho](img_page/score.png)
+
+### Khung trò chuyện
+![ManHinhCho](img_page/messageBox.png)
+
+### Cơ chế kiểm tra va chạm với tường
+![ManHinhCho](img_page/check_collision_wall.png)
+
+### Cơ chế kiểm tra va chạm với ma
+![ManHinhCho](img_page/collision_ghost.png)
