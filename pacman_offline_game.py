@@ -1,4 +1,6 @@
 import copy
+from threading import local
+
 from map import map_level_1
 import pygame
 import random
@@ -69,10 +71,14 @@ font = pygame.font.Font(font_path, 20)
 # màu nền
 background_color = (45, 45, 45)
 
+# kích thước pacman
+WIDTH_PACMAN = 23
+HEIGHT_PACMAN = 23
+
 # tải ảnh pacman
 player_images = []
 for i in range(1, 5):
-    player_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/{i}.png"), (25, 25)))
+    player_images.append(pygame.transform.scale(pygame.image.load(f"images/pacman/{i}.png"), (WIDTH_PACMAN, HEIGHT_PACMAN)))
 
 # tải hình ảnh mấy con ma
 blue_ghost_image = pygame.transform.scale(pygame.image.load("images/ghost/blue.png"), (25, 25))
@@ -230,15 +236,18 @@ def draw_flicker_player():
 
 def check_position(location_x, location_y):
     turns = [False, False, False, False]  # Right, Left, Up, Down
-    if map_level[location_y // 25][(location_x - speed_player) // 25] < 3:
+    if map_level[location_y // 25][(location_x - speed_player) // 25] < 3 \
+            and map_level[(location_y + HEIGHT_PACMAN) // 25][(location_x - speed_player) // 25] < 3:
         turns[1] = True
-    if map_level[location_y // 25][(location_x + speed_player + 23) // 25] < 3:
+    if map_level[location_y // 25][(location_x + WIDTH_PACMAN + speed_player) // 25] < 3 \
+            and map_level[(location_y + HEIGHT_PACMAN) // 25][(location_x + WIDTH_PACMAN) // 25] < 3:
         turns[0] = True
-    if map_level[(location_y + speed_player + 23) // 25][location_x // 25] < 3:
+    if map_level[(location_y + HEIGHT_PACMAN + speed_player) // 25][location_x // 25] < 3 \
+            and map_level[(location_y + HEIGHT_PACMAN + speed_player) // 25][(location_x + WIDTH_PACMAN) // 25] < 3:
         turns[3] = True
-    if map_level[(location_y - speed_player) // 25][location_x // 25] < 3:
+    if map_level[(location_y - speed_player) // 25][location_x // 25] < 3 \
+            and map_level[(location_y - speed_player) // 25][(location_x + WIDTH_PACMAN) // 25] < 3:
         turns[2] = True
-
     return turns
 
 
@@ -261,10 +270,10 @@ def check_eat_food(score):
 
 
 def check_collisions_ghost(player_location_x, player_location_y, ghost_x, ghost_y):
-    if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
-            or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y + 25 < ghost_y + 25):
+    if (ghost_x <= player_location_x + WIDTH_PACMAN <= ghost_x + 25 and ghost_y <= player_location_y + HEIGHT_PACMAN <= ghost_y + 25) \
+            or (ghost_x <= player_location_x <= ghost_x + 25 and ghost_y <= player_location_y <= ghost_y + 25) \
+            or (ghost_x <= player_location_x + WIDTH_PACMAN <= ghost_x + 25 and ghost_y <= player_location_y <= ghost_y + 25) \
+            or (ghost_x <= player_location_x <= ghost_x + 25 and ghost_y <= player_location_y + HEIGHT_PACMAN <= ghost_y + 25):
         return True
     else:
         return False

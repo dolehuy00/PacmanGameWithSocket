@@ -33,8 +33,8 @@ data_clients = {}
 WIDTH_PLAYING = 900
 HEIGHT_PLAYING = 750
 
-# goi han nguoi choi
-limit_player = 6
+WIDTH_PLAYER = 23
+HEIGHT_PLAYER = 23
 
 
 # ramdom food
@@ -184,10 +184,13 @@ class Ghost:
 
 # hàm kiểm tra va chạm với 1 ma
 def check_collision_ghost_or_other_player(player_location_x, player_location_y, ghost_x, ghost_y):
-    if (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y + 25 < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y < ghost_y + 25) \
-            or (ghost_x < player_location_x + 25 < ghost_x + 25 and ghost_y < player_location_y < ghost_y + 25) \
-            or (ghost_x <= player_location_x < ghost_x + 25 and ghost_y <= player_location_y + 25 < ghost_y + 25):
+    if (ghost_x <= player_location_x + WIDTH_PLAYER <= ghost_x + 25
+        and ghost_y <= player_location_y + HEIGHT_PLAYER <= ghost_y + 25) \
+            or (ghost_x <= player_location_x <= ghost_x + 25 and ghost_y <= player_location_y <= ghost_y + 25) \
+            or (ghost_x <= player_location_x + WIDTH_PLAYER <= ghost_x + 25
+                and ghost_y <= player_location_y <= ghost_y + 25) \
+            or (ghost_x <= player_location_x <= ghost_x + 25
+                and ghost_y <= player_location_y + HEIGHT_PLAYER <= ghost_y + 25):
         return True
     else:
         return False
@@ -396,21 +399,17 @@ def slow_other_player(client):
             thread_send_data_to_client = threading.Thread(target=send_you_data,
                                                           args=({"you": value}, eval(key),))
             thread_send_data_to_client.start()
-    print(data_clients)
 
 
 # hàm gửi dữ liệu map, ghost, other player cho các client khác
-def send_data():
+def send_client_data(client_data, client_address):
     try:
         for client in connected_clients:
-            data_send = {}
-            data_other_player = data_clients.copy()
-            data_other_player.pop(str(client))
-            data_send["ghost"] = build_data_ghost()
-            data_send["map"] = map_level
-            data_send["otherPlayer"] = list(data_other_player.values())
-            if len(data_send) > 0:
-                server_socket.sendto(json.dumps(data_send).encode(), client)
+            data_map_send = {"ghost": build_data_ghost(), "map": map_level}
+            server_socket.sendto(json.dumps(data_map_send).encode(), client)
+            if client != client_address:
+                data_client_send = {"otherPlayer": client_data}
+                server_socket.sendto(json.dumps(data_client_send).encode(), client)
     except:
         pass
 
@@ -553,6 +552,7 @@ while running_main:
         if is_eaten:
             if eat_big:
                 slow_other_player(str(client_address))
+                data_json[9] = False
             data_json[6] += score
             thread_send_data_to_client = threading.Thread(target=send_you_data, args=({"you": data_json},
                                                                                       client_address,))
@@ -561,13 +561,12 @@ while running_main:
         data_clients.update({str(client_address): data_json})
 
         # gửi lại dữ liệu cho các client
-        thread_send_data_to_other_client = threading.Thread(target=send_data)
+        thread_send_data_to_other_client = threading.Thread(target=send_client_data, args=(data_json, client_address,))
         thread_send_data_to_other_client.start()
 
     except ConnectionResetError as e:
         # Xử lý khi một client ngắt kết nối
         connected_clients.clear()
         data_clients.clear()
-        print("Client", client_address, "đã ngắt kết nối.")
     except (OSError, BaseException):
         pass

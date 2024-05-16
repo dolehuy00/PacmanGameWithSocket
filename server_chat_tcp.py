@@ -47,7 +47,28 @@ def broadcast(message):
 
 # đinh nghĩa hàm điều khiển client
 def handle(client):
-    while True:
+    thread_running = True
+    while thread_running:
+        try:
+            # cho client gui nickname
+            data = client.recv(1024)
+            nickname = json.loads(data.decode())
+            # nhận tên nickname của client
+            if nickname in nicknames or len(nickname) == 0:
+                client.send('NAME_ERROR'.encode())
+            else:
+                nicknames.append(nickname)
+                # add client vào mảng client để quản lý
+                clients.append(client)
+                # gui thong bao cho client
+                client.send('NAME_SUCCESS'.encode())
+                # in ra màn hình nickname đã join vào room
+                print(f'--> Nickname {nickname} join!')
+                break
+        except ConnectionResetError:
+            thread_running = False
+
+    while thread_running:
         try:
             # nhận message client
             data = client.recv(1024)
@@ -60,8 +81,8 @@ def handle(client):
             client.close()
             nickname = nicknames[index]
             # broadcast thông báo client rời phòng
-            broadcast(json.dumps(["", nickname, "Left the room!"]).encode())
-            print(f"{nickname} disconnect!")
+            broadcast(json.dumps(["LEFT_ROOM", nickname, "Left the room!"]).encode())
+            print(f"--> {nickname} disconnect!")
             nicknames.remove(nickname)
             break
 
@@ -72,21 +93,8 @@ def receive():
         try:
             client, address = server.accept()
             # thông báo kết nối của client từ address nào
-            print(f'Connected with {str(address)}')
-            # gửi thong bao den client để nhận tên nickname của client
-            client.send('NICKNAME'.encode())
-            data = client.recv(1024)
-            data_json = json.loads(data.decode())
-            # nhận tên nickname của client
-            nickname = data_json[1]
-            nicknames.append(nickname)
-            # add client vào mảng client để quản lý
-            clients.append(client)
-            # in ra màn hình nickname đã join vào room
-            print(f'Nickname of client is {nickname}')
-            broadcast(data)
-            # gửi về client trạng thái đã kết nối được với server
-            # tạo thread điều khiển client riêng biệt
+            print(f'-> Connected with {str(address)}')
+            # tao thread xu ly ket noi cho client
             thread = threading.Thread(target=handle, args=(client,))
             thread.start()
         except:
